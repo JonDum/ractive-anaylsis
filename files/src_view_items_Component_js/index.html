@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/Component.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/Component.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">76.02</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">265</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">8.63</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.06</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import runloop from &#039;../../global/runloop&#039;;
+import { warnIfDebug } from &#039;../../utils/log&#039;;
+import { ATTRIBUTE, BINDING_FLAG, COMPONENT, DECORATOR, EVENT, TRANSITION, YIELDER } from &#039;../../config/types&#039;;
+import Item from &#039;./shared/Item&#039;;
+import ConditionalAttribute from &#039;./element/ConditionalAttribute&#039;;
+import construct from &#039;../../Ractive/construct&#039;;
+import initialise from &#039;../../Ractive/initialise&#039;;
+import render from &#039;../../Ractive/render&#039;;
+import { create } from &#039;../../utils/object&#039;;
+import createItem from &#039;./createItem&#039;;
+import { removeFromArray } from &#039;../../utils/array&#039;;
+import { bind, cancel, rebind, render as callRender, unbind, unrender, update } from &#039;../../shared/methodCallers&#039;;
+import Hook from &#039;../../events/Hook&#039;;
+import EventDirective from &#039;./shared/EventDirective&#039;;
+import RactiveEvent from &#039;./component/RactiveEvent&#039;;
+import updateLiveQueries from &#039;./component/updateLiveQueries&#039;;
+
+function removeFromLiveComponentQueries ( component ) {
+	let instance = component.ractive;
+
+	while ( instance ) {
+		const query = instance._liveComponentQueries[ `_${component.name}` ];
+		if ( query ) query.remove( component );
+
+		instance = instance.parent;
+	}
+}
+
+function makeDirty ( query ) {
+	query.makeDirty();
+}
+
+const teardownHook = new Hook( &#039;teardown&#039; );
+
+export default class Component extends Item {
+	constructor ( options, ComponentConstructor ) {
+		super( options );
+		this.type = COMPONENT; // override ELEMENT from super
+
+		const instance = create( ComponentConstructor.prototype );
+
+		this.instance = instance;
+		this.name = options.template.e;
+		this.parentFragment = options.parentFragment;
+
+		this.liveQueries = [];
+
+		if ( instance.el ) {
+			warnIfDebug( `The &lt;${this.name}&gt; component has a default &#039;el&#039; property; it has been disregarded` );
+		}
+
+		let partials = options.template.p || {};
+		if ( !( &#039;content&#039; in partials ) ) partials.content = options.template.f || [];
+		this._partials = partials; // TEMP
+
+		this.yielders = {};
+
+		// find container
+		let fragment = options.parentFragment;
+		let container;
+		while ( fragment ) {
+			if ( fragment.owner.type === YIELDER ) {
+				container = fragment.owner.container;
+				break;
+			}
+
+			fragment = fragment.parent;
+		}
+
+		// add component-instance-specific properties
+		instance.parent = this.parentFragment.ractive;
+		instance.container = container || null;
+		instance.root = instance.parent.root;
+		instance.component = this;
+
+		construct( this.instance, { partials });
+
+		// for hackability, this could be an open option
+		// for any ractive instance, but for now, just
+		// for components and just for ractive...
+		instance._inlinePartials = partials;
+
+		this.attributeByName = {};
+
+		this.attributes = [];
+		( this.template.m || [] ).forEach( template =&gt; {
+			switch ( template.t ) {
+				case ATTRIBUTE:
+				case EVENT:
+				case TRANSITION:
+					this.attributes.push( createItem({
+						owner: this,
+						parentFragment: this.parentFragment,
+						template
+					}) );
+					break;
+
+				case BINDING_FLAG:
+				case DECORATOR:
+					break;
+
+				default:
+					this.attributes.push( new ConditionalAttribute({
+						owner: this,
+						parentFragment: this.parentFragment,
+						template
+					}) );
+					break;
+			}
+		});
+
+		this.eventHandlers = [];
+		if ( this.template.v ) this.setupEvents();
+	}
+
+	bind () {
+		this.attributes.forEach( bind );
+
+		initialise( this.instance, {
+			partials: this._partials
+		}, {
+			cssIds: this.parentFragment.cssIds
+		});
+
+		this.eventHandlers.forEach( bind );
+
+		this.bound = true;
+	}
+
+	bubble () {
+		if ( !this.dirty ) {
+			this.dirty = true;
+			this.parentFragment.bubble();
+		}
+	}
+
+	checkYielders () {
+		Object.keys( this.yielders ).forEach( name =&gt; {
+			if ( this.yielders[ name ].length &gt; 1 ) {
+				runloop.end();
+				throw new Error( `A component template can only have one {{yield${name ? &#039; &#039; + name : &#039;&#039;}}} declaration at a time` );
+			}
+		});
+	}
+
+	destroyed () {
+		if ( this.instance.fragment ) this.instance.fragment.destroyed();
+	}
+
+	detach () {
+		return this.instance.fragment.detach();
+	}
+
+	find ( selector ) {
+		return this.instance.fragment.find( selector );
+	}
+
+	findAll ( selector, query ) {
+		this.instance.fragment.findAll( selector, query );
+	}
+
+	findComponent ( name ) {
+		if ( !name || this.name === name ) return this.instance;
+
+		if ( this.instance.fragment ) {
+			return this.instance.fragment.findComponent( name );
+		}
+	}
+
+	findAllComponents ( name, query ) {
+		if ( query.test( this ) ) {
+			query.add( this.instance );
+
+			if ( query.live ) {
+				this.liveQueries.push( query );
+			}
+		}
+
+		this.instance.fragment.findAllComponents( name, query );
+	}
+
+	firstNode ( skipParent ) {
+		return this.instance.fragment.firstNode( skipParent );
+	}
+
+	rebind () {
+		// implicit mappings can cause issues during shuffles, so remap everythiing as necessary
+		// TODO: it&#039;s probably better not to throw ALL of the mappings away on rebind
+		this.instance.viewmodel.resetMappings();
+
+		this.attributes.forEach( rebind );
+
+		this.liveQueries.forEach( makeDirty );
+
+		this.instance.fragment.rebind( this.instance.viewmodel );
+	}
+
+	render ( target, occupants ) {
+		render( this.instance, target, null, occupants );
+
+		this.checkYielders();
+		this.attributes.forEach( callRender );
+		this.eventHandlers.forEach( callRender );
+		updateLiveQueries( this );
+
+		this.rendered = true;
+	}
+
+	setupEvents () {
+		const handlers = this.eventHandlers;
+
+		Object.keys( this.template.v ).forEach( key =&gt; {
+			const eventNames = key.split( &#039;-&#039; );
+			const template = this.template.v[ key ];
+
+			eventNames.forEach( eventName =&gt; {
+				const event = new RactiveEvent( this.instance, eventName );
+				handlers.push( new EventDirective( this, event, template ) );
+			});
+		});
+	}
+
+	toString () {
+		return this.instance.toHTML();
+	}
+
+	unbind () {
+		this.bound = false;
+
+		this.attributes.forEach( unbind );
+
+		const instance = this.instance;
+		instance.viewmodel.teardown();
+		instance.fragment.unbind();
+		instance._observers.forEach( cancel );
+
+		removeFromLiveComponentQueries( this );
+
+		if ( instance.fragment.rendered &amp;&amp; instance.el.__ractive_instances__ ) {
+			removeFromArray( instance.el.__ractive_instances__, instance );
+		}
+
+		Object.keys( instance._links ).forEach( k =&gt; instance._links[k].unlink() );
+
+		teardownHook.fire( instance );
+	}
+
+	unrender ( shouldDestroy ) {
+		this.rendered = false;
+
+		this.shouldDestroy = shouldDestroy;
+		this.instance.unrender();
+		this.attributes.forEach( unrender );
+		this.eventHandlers.forEach( unrender );
+		this.liveQueries.forEach( query =&gt; query.remove( this.instance ) );
+	}
+
+	update () {
+		this.dirty = false;
+		this.instance.fragment.update();
+		this.checkYielders();
+		this.attributes.forEach( update );
+		this.eventHandlers.forEach( update );
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

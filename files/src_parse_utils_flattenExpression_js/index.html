@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/parse/utils/flattenExpression.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/parse/utils/flattenExpression.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">52.32</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">116</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">19.50</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.20</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { REFERENCE, BOOLEAN_LITERAL, GLOBAL, NUMBER_LITERAL, REGEXP_LITERAL, STRING_LITERAL, ARRAY_LITERAL, OBJECT_LITERAL, KEY_VALUE_PAIR, PREFIX_OPERATOR, INFIX_OPERATOR, INVOCATION, BRACKETED, MEMBER, REFINEMENT, CONDITIONAL } from &#039;../../config/types&#039;;
+import { isObject } from &#039;../../utils/is&#039;;
+
+export default function flattenExpression ( expression ) {
+	var refs, count = 0, stringified;
+
+	extractRefs( expression, refs = [] );
+	stringified = stringify( expression );
+
+	refs = refs.map( r =&gt; r.indexOf( &#039;...&#039; ) === 0 ? r.substr( 3 ) : r );
+
+	return {
+		r: refs,
+		s: getVars(stringified)
+	};
+
+	function getVars(expr) {
+		let vars = [];
+		for ( let i = count - 1; i &gt;= 0; i-- ) {
+			vars.push( `spread$${i}` );
+		}
+		return vars.length ? `(function(){var ${vars.join(&#039;,&#039;)};return(${expr});})()` : expr;
+	}
+
+	function stringify ( node ) {
+		switch ( node.t ) {
+			case BOOLEAN_LITERAL:
+			case GLOBAL:
+			case NUMBER_LITERAL:
+			case REGEXP_LITERAL:
+				return node.v;
+
+			case STRING_LITERAL:
+				return JSON.stringify( String( node.v ) );
+
+			case ARRAY_LITERAL:
+				return &#039;[&#039; + ( node.m ? node.m.map( stringify ).join( &#039;,&#039; ) : &#039;&#039; ) + &#039;]&#039;;
+
+			case OBJECT_LITERAL:
+				return &#039;{&#039; + ( node.m ? node.m.map( stringify ).join( &#039;,&#039; ) : &#039;&#039; ) + &#039;}&#039;;
+
+			case KEY_VALUE_PAIR:
+				return node.k + &#039;:&#039; + stringify( node.v );
+
+			case PREFIX_OPERATOR:
+				return ( node.s === &#039;typeof&#039; ? &#039;typeof &#039; : node.s ) + stringify( node.o );
+
+			case INFIX_OPERATOR:
+				return stringify( node.o[0] ) + ( node.s.substr( 0, 2 ) === &#039;in&#039; ? &#039; &#039; + node.s + &#039; &#039; : node.s ) + stringify( node.o[1] );
+
+			case INVOCATION:
+				if ( node.spread ) {
+					let id = count++;
+					return `(spread$${ id } = ${ stringify(node.x) }).apply(spread$${ id }, [].concat(${ node.o ? node.o.map( a =&gt; a.n &amp;&amp; a.n.indexOf( &#039;...&#039; ) === 0 ? stringify( a ) : &#039;[&#039; + stringify(a) + &#039;]&#039; ).join( &#039;,&#039; ) : &#039;&#039; }) )`;
+				} else {
+					return stringify( node.x ) + &#039;(&#039; + ( node.o ? node.o.map( stringify ).join( &#039;,&#039; ) : &#039;&#039; ) + &#039;)&#039;;
+				}
+
+			case BRACKETED:
+				return &#039;(&#039; + stringify( node.x ) + &#039;)&#039;;
+
+			case MEMBER:
+				return stringify( node.x ) + stringify( node.r );
+
+			case REFINEMENT:
+				return ( node.n ? &#039;.&#039; + node.n : &#039;[&#039; + stringify( node.x ) + &#039;]&#039; );
+
+			case CONDITIONAL:
+				return stringify( node.o[0] ) + &#039;?&#039; + stringify( node.o[1] ) + &#039;:&#039; + stringify( node.o[2] );
+
+			case REFERENCE:
+				return &#039;_&#039; + refs.indexOf( node.n );
+
+			default:
+				throw new Error( &#039;Expected legal JavaScript&#039; );
+		}
+	}
+}
+
+// TODO maybe refactor this?
+function extractRefs ( node, refs ) {
+	var i, list;
+
+	if ( node.t === REFERENCE ) {
+		if ( refs.indexOf( node.n ) === -1 ) {
+			refs.unshift( node.n );
+		}
+	}
+
+	list = node.o || node.m;
+	if ( list ) {
+		if ( isObject( list ) ) {
+			extractRefs( list, refs );
+		} else {
+			i = list.length;
+			while ( i-- ) {
+				if ( list[i].n &amp;&amp; list[i].n.indexOf(&#039;...&#039;) === 0 ) {
+					node.spread = true;
+				}
+				extractRefs( list[i], refs );
+			}
+		}
+	}
+
+	if ( node.x ) {
+		extractRefs( node.x, refs );
+	}
+
+	if ( node.r ) {
+		extractRefs( node.r, refs );
+	}
+
+	if ( node.v ) {
+		extractRefs( node.v, refs );
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/component/Mapping.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/component/Mapping.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">48.51</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">145</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">21.94</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.44</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { INTERPOLATOR } from &#039;../../../config/types&#039;;
+import Item from &#039;../shared/Item&#039;;
+import { warnOnceIfDebug } from &#039;../../../utils/log&#039;;
+import Fragment from &#039;../../Fragment&#039;;
+import findElement from &#039;../shared/findElement&#039;;
+import parseJSON from &#039;../../../utils/parseJSON&#039;;
+import resolve from &#039;../../resolvers/resolve&#039;;
+import { isArray } from &#039;../../../utils/is&#039;;
+import runloop from &#039;../../../global/runloop&#039;;
+
+export default class Mapping extends Item {
+	constructor ( options ) {
+		super( options );
+
+		this.name = options.template.n;
+
+		this.owner = options.owner || options.parentFragment.owner || options.element || findElement( options.parentFragment );
+		this.element = options.element || (this.owner.attributeByName ? this.owner : findElement( options.parentFragment ) );
+		this.parentFragment = this.element.parentFragment; // shared
+		this.ractive = this.parentFragment.ractive;
+
+		this.fragment = null;
+
+		this.element.attributeByName[ this.name ] = this;
+
+		this.value = options.template.f;
+	}
+
+	bind () {
+		if ( this.fragment ) {
+			this.fragment.bind();
+		}
+
+		let template = this.template.f;
+		let viewmodel = this.element.instance.viewmodel;
+
+		if ( template === 0 ) {
+			// empty attributes are `true`
+			viewmodel.joinKey( this.name ).set( true );
+		}
+
+		else if ( typeof template === &#039;string&#039; ) {
+			const parsed = parseJSON( template );
+			viewmodel.joinKey( this.name ).set( parsed ? parsed.value : template );
+		}
+
+		else if ( isArray( template ) ) {
+			createMapping( this, true );
+		}
+	}
+
+	rebind () {
+		if ( this.fragment ) this.fragment.rebind();
+
+		if ( this.boundFragment ) this.boundFragment.unbind();
+
+		// handle remapping
+		if ( isArray( this.template.f ) ) {
+			createMapping( this );
+		}
+	}
+
+	render () {}
+
+	unbind () {
+		if ( this.fragment ) this.fragment.unbind();
+		if ( this.boundFragment ) this.boundFragment.unbind();
+
+		if ( this.element.bound ) {
+			const viewmodel = this.element.instance.viewmodel;
+			if ( viewmodel.unmap( this.name ) ) {
+				if ( !this.element.rebinding ) {
+					this.element.rebinding = true;
+					runloop.scheduleTask( () =&gt; {
+						this.element.rebind();
+						this.element.rebinding = false;
+					});
+				}
+			}
+		}
+	}
+
+	unrender () {}
+
+	update () {
+		if ( this.dirty ) {
+			this.dirty = false;
+			if ( this.fragment ) this.fragment.update();
+			if ( this.boundFragment ) this.boundFragment.update();
+			if ( this.rendered ) this.updateDelegate();
+		}
+	}
+}
+
+function createMapping ( item, check ) {
+	const template = item.template.f;
+	const viewmodel = item.element.instance.viewmodel;
+	const childData = viewmodel.value;
+
+	if ( template.length === 1 &amp;&amp; template[0].t === INTERPOLATOR ) {
+		item.model = resolve( item.parentFragment, template[0] );
+
+		if ( !item.model ) {
+			warnOnceIfDebug( `The ${item.name}=&#039;{{${template[0].r}}}&#039; mapping is ambiguous, and may cause unexpected results. Consider initialising your data to eliminate the ambiguity`, { ractive: item.element.instance }); // TODO add docs page explaining item
+			item.parentFragment.ractive.get( item.name ); // side-effect: create mappings as necessary
+			item.model = item.parentFragment.findContext().joinKey( item.name );
+		}
+
+
+		if ( check ) {
+			// map the model and check for remap
+			const remapped = viewmodel.map( item.name, item.model );
+			if ( remapped !== item.model &amp;&amp; item.element.bound &amp;&amp; !item.element.rebinding ) {
+				item.element.rebinding = true;
+				runloop.scheduleTask( () =&gt; {
+					item.element.rebind();
+					item.element.rebinding = false;
+				});
+			}
+		} else {
+			viewmodel.map( item.name, item.model );
+		}
+
+		if ( item.model.get() === undefined &amp;&amp; item.name in childData ) {
+			item.model.set( childData[ item.name ] );
+		}
+	}
+
+	else {
+		item.boundFragment = new Fragment({
+			owner: item,
+			template
+		}).bind();
+
+		item.model = viewmodel.joinKey( item.name );
+		item.model.set( item.boundFragment.valueOf() );
+
+		// item is a *bit* of a hack
+		item.boundFragment.bubble = () =&gt; {
+			Fragment.prototype.bubble.call( item.boundFragment );
+			item.boundFragment.update();
+			item.model.set( item.boundFragment.valueOf() );
+		};
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

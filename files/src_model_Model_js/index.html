@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/model/Model.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/model/Model.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">94.36</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">583</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">4.50</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.04</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { capture } from &#039;../global/capture&#039;;
+import Promise from &#039;../utils/Promise&#039;;
+import { isEqual, isNumeric } from &#039;../utils/is&#039;;
+import { removeFromArray } from &#039;../utils/array&#039;;
+import { handleChange, mark, teardown } from &#039;../shared/methodCallers&#039;;
+import Ticker from &#039;../shared/Ticker&#039;;
+import getPrefixer from &#039;./helpers/getPrefixer&#039;;
+import { isArray, isObject } from &#039;../utils/is&#039;;
+import KeyModel from &#039;./specials/KeyModel&#039;;
+import KeypathModel from &#039;./specials/KeypathModel&#039;;
+import { escapeKey, unescapeKey } from &#039;../shared/keypaths&#039;;
+import runloop from &#039;../global/runloop&#039;;
+
+const hasProp = Object.prototype.hasOwnProperty;
+
+function updateFromBindings ( model ) {
+	model.updateFromBindings( true );
+}
+
+function updateKeypathDependants ( model ) {
+	model.updateKeypathDependants();
+}
+
+let originatingModel = null;
+
+export default class Model {
+	constructor ( parent, key ) {
+		this.deps = [];
+
+		this.children = [];
+		this.childByKey = {};
+
+		this.indexModels = [];
+
+		this.unresolved = [];
+		this.unresolvedByKey = {};
+
+		this.bindings = [];
+		this.patternObservers = [];
+
+		this.value = undefined;
+
+		this.ticker = null;
+
+		if ( parent ) {
+			this.parent = parent;
+			this.root = parent.root;
+			this.key = unescapeKey( key );
+			this.isReadonly = parent.isReadonly;
+
+			if ( parent.value ) {
+				this.value = parent.value[ this.key ];
+				this.adapt();
+			}
+		}
+	}
+
+	adapt () {
+		const adaptors = this.root.adaptors;
+		const len = adaptors.length;
+
+		this.rewrap = false;
+
+		// Exit early if no adaptors
+		if ( len === 0 ) return;
+
+		const value = this.value;
+
+		// TODO remove this legacy nonsense
+		const ractive = this.root.ractive;
+		const keypath = this.getKeypath();
+
+		// tear previous adaptor down if present
+		if ( this.wrapper ) {
+			const shouldTeardown = !this.wrapper.reset || this.wrapper.reset( value ) === false;
+
+			if ( shouldTeardown ) {
+				this.wrapper.teardown();
+				this.wrapper = null;
+
+				// don&#039;t branch for undefined values
+				if ( this.value !== undefined ) {
+					const parentValue = this.parent.value || this.parent.createBranch( this.key );
+					if ( parentValue[ this.key ] !== this.value ) parentValue[ this.key ] = value;
+				}
+			} else {
+				this.value = this.wrapper.get();
+				return;
+			}
+		}
+
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			const adaptor = adaptors[i];
+			if ( adaptor.filter( value, keypath, ractive ) ) {
+				this.wrapper = adaptor.wrap( ractive, value, keypath, getPrefixer( keypath ) );
+				this.wrapper.value = this.value;
+				this.wrapper.__model = this; // massive temporary hack to enable array adaptor
+
+				this.value = this.wrapper.get();
+
+				break;
+			}
+		}
+	}
+
+	addUnresolved ( key, resolver ) {
+		if ( !this.unresolvedByKey[ key ] ) {
+			this.unresolved.push( key );
+			this.unresolvedByKey[ key ] = [];
+		}
+
+		this.unresolvedByKey[ key ].push( resolver );
+	}
+
+	animate ( from, to, options, interpolator ) {
+		if ( this.ticker ) this.ticker.stop();
+
+		let fulfilPromise;
+		const promise = new Promise( fulfil =&gt; fulfilPromise = fulfil );
+
+		this.ticker = new Ticker({
+			duration: options.duration,
+			easing: options.easing,
+			step: t =&gt; {
+				const value = interpolator( t );
+				this.applyValue( value );
+				if ( options.step ) options.step( t, value );
+			},
+			complete: () =&gt; {
+				this.applyValue( to );
+				if ( options.complete ) options.complete( to );
+
+				this.ticker = null;
+				fulfilPromise();
+			}
+		});
+
+		promise.stop = this.ticker.stop;
+		return promise;
+	}
+
+	applyValue ( value ) {
+		if ( isEqual( value, this.value ) ) return;
+
+		// TODO deprecate this nonsense
+		this.registerChange( this.getKeypath(), value );
+
+		if ( this.parent.wrapper &amp;&amp; this.parent.wrapper.set ) {
+			this.parent.wrapper.set( this.key, value );
+			this.parent.value = this.parent.wrapper.get();
+
+			this.value = this.parent.value[ this.key ];
+			this.adapt();
+		} else if ( this.wrapper ) {
+			this.value = value;
+			this.adapt();
+		} else {
+			const parentValue = this.parent.value || this.parent.createBranch( this.key );
+			parentValue[ this.key ] = value;
+
+			this.value = value;
+			this.adapt();
+		}
+
+		this.parent.clearUnresolveds();
+		this.clearUnresolveds();
+
+		// notify dependants
+		const previousOriginatingModel = originatingModel; // for the array.length special case
+		originatingModel = this;
+
+		this.children.forEach( mark );
+		this.deps.forEach( handleChange );
+
+		this.notifyUpstream();
+
+		originatingModel = previousOriginatingModel;
+
+		// keep track of array length
+		if ( isArray( value ) ) this.length = value.length;
+	}
+
+	clearUnresolveds ( specificKey ) {
+		let i = this.unresolved.length;
+
+		while ( i-- ) {
+			const key = this.unresolved[i];
+
+			if ( specificKey &amp;&amp; key !== specificKey ) continue;
+
+			const resolvers = this.unresolvedByKey[ key ];
+			const hasKey = this.has( key );
+
+			let j = resolvers.length;
+			while ( j-- ) {
+				if ( hasKey ) resolvers[j].attemptResolution();
+				if ( resolvers[j].resolved ) resolvers.splice( j, 1 );
+			}
+
+			if ( !resolvers.length ) {
+				this.unresolved.splice( i, 1 );
+				this.unresolvedByKey[ key ] = null;
+			}
+		}
+	}
+
+	createBranch ( key ) {
+		const branch = isNumeric( key ) ? [] : {};
+		this.set( branch );
+
+		return branch;
+	}
+
+	findMatches ( keys ) {
+		const len = keys.length;
+
+		let existingMatches = [ this ];
+		let matches;
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			const key = keys[i];
+
+			if ( key === &#039;*&#039; ) {
+				matches = [];
+				existingMatches.forEach( model =&gt; {
+					matches.push.apply( matches, model.getValueChildren( model.get() ) );
+				});
+			} else {
+				matches = existingMatches.map( model =&gt; model.joinKey( key ) );
+			}
+
+			existingMatches = matches;
+		}
+
+		return matches;
+	}
+
+	get ( shouldCapture ) {
+		if ( shouldCapture ) capture( this );
+		// if capturing, this value needs to be unwrapped because it&#039;s for external use
+		return shouldCapture &amp;&amp; this.wrapper ? this.wrapper.value : this.value;
+	}
+
+	getIndexModel ( fragmentIndex ) {
+		const indexModels = this.parent.indexModels;
+
+		// non-numeric keys are a special of a numeric index in a object iteration
+		if ( typeof this.key === &#039;string&#039; &amp;&amp; fragmentIndex !== undefined ) {
+			return new KeyModel( fragmentIndex, this );
+		} else if ( !indexModels[ this.key ] ) {
+			indexModels[ this.key ] = new KeyModel( this.key, this );
+		}
+
+		return indexModels[ this.key ];
+	}
+
+	getKeyModel () {
+		// TODO... different to IndexModel because key can never change
+		return new KeyModel( escapeKey( this.key ), this );
+	}
+
+	getKeypathModel ( ractive ) {
+		let keypath = this.getKeypath(), model = this.keypathModel || ( this.keypathModel = new KeypathModel( this ) );
+
+		if ( ractive &amp;&amp; ractive.component ) {
+			let mapped = this.getKeypath( ractive );
+			if ( mapped !== keypath ) {
+				let map = ractive.viewmodel.keypathModels || ( ractive.viewmodel.keypathModels = {} );
+				let child = map[ keypath ] || ( map[ keypath ] = new KeypathModel( this, ractive ) );
+				model.addChild( child );
+				return child;
+			}
+		}
+
+		return model;
+	}
+
+	getKeypath ( ractive ) {
+		if ( ! this.keypath ) this.keypath = this.parent.isRoot ? escapeKey( this.key ) : this.parent.getKeypath() + &#039;.&#039; + escapeKey( this.key );
+
+		let root = this.keypath;
+
+		if ( ractive &amp;&amp; ractive.component ) {
+			let map = ractive.viewmodel.mappings;
+			for ( let k in map ) {
+				if ( root.indexOf( map[ k ].getKeypath() ) &gt;= 0 ) {
+					root = root.replace( map[ k ].getKeypath(), k );
+					break;
+				}
+			}
+		}
+
+		return root;
+	}
+
+	getValueChildren ( value ) {
+		let children;
+		if ( isArray( value ) ) {
+			children = [];
+			// special case - array.length. This is a horrible kludge, but
+			// it&#039;ll do for now. Alternatives welcome
+			if ( originatingModel &amp;&amp; originatingModel.parent === this &amp;&amp; originatingModel.key === &#039;length&#039; ) {
+				children.push( originatingModel );
+			}
+			value.forEach( ( m, i ) =&gt; {
+				children.push( this.joinKey( i ) );
+			});
+
+		}
+
+		else if ( isObject( value ) || typeof value === &#039;function&#039; ) {
+			children = Object.keys( value ).map( key =&gt; this.joinKey( key ) );
+		}
+
+		else if ( value != null ) {
+			return [];
+		}
+
+		return children;
+	}
+
+	has ( key ) {
+		const value = this.get();
+		if ( !value ) return false;
+
+		key = unescapeKey( key );
+		if ( hasProp.call( value, key ) ) return true;
+
+		// We climb up the constructor chain to find if one of them contains the key
+		let constructor = value.constructor;
+		while ( constructor !== Function &amp;&amp; constructor !== Array &amp;&amp; constructor !== Object ) {
+			if ( hasProp.call( constructor.prototype, key ) ) return true;
+			constructor = constructor.constructor;
+		}
+
+		return false;
+	}
+
+	joinKey ( key ) {
+		if ( key === undefined || key === &#039;&#039; ) return this;
+
+		if ( !this.childByKey.hasOwnProperty( key ) ) {
+			const child = new Model( this, key );
+			this.children.push( child );
+			this.childByKey[ key ] = child;
+		}
+
+		return this.childByKey[ key ];
+	}
+
+	joinAll ( keys ) {
+		let model = this;
+		for ( let i = 0; i &lt; keys.length; i += 1 ) {
+			model = model.joinKey( keys[i] );
+		}
+
+		return model;
+	}
+
+	mark () {
+		const value = this.retrieve();
+
+		if ( !isEqual( value, this.value ) ) {
+			const old = this.value;
+			this.value = value;
+
+			// make sure the wrapper stays in sync
+			if ( old !== value || this.rewrap ) this.adapt();
+
+			// keep track of array lengths
+			if ( isArray( value ) ) this.length = value.length;
+
+			this.children.forEach( mark );
+
+			this.deps.forEach( handleChange );
+			this.clearUnresolveds();
+		}
+	}
+
+	merge ( array, comparator ) {
+		const oldArray = comparator ? this.value.map( comparator ) : this.value;
+		const newArray = comparator ? array.map( comparator ) : array;
+
+		const oldLength = oldArray.length;
+
+		let usedIndices = {};
+		let firstUnusedIndex = 0;
+
+		const newIndices = oldArray.map( item =&gt; {
+			let index;
+			let start = firstUnusedIndex;
+
+			do {
+				index = newArray.indexOf( item, start );
+
+				if ( index === -1 ) {
+					return -1;
+				}
+
+				start = index + 1;
+			} while ( ( usedIndices[ index ] === true ) &amp;&amp; start &lt; oldLength );
+
+			// keep track of the first unused index, so we don&#039;t search
+			// the whole of newArray for each item in oldArray unnecessarily
+			if ( index === firstUnusedIndex ) {
+				firstUnusedIndex += 1;
+			}
+			// allow next instance of next &quot;equal&quot; to be found item
+			usedIndices[ index ] = true;
+			return index;
+		});
+
+		this.parent.value[ this.key ] = array;
+		this._merged = true;
+		this.shuffle( newIndices );
+	}
+
+	notifyUpstream () {
+		let parent = this.parent, prev = this;
+		while ( parent ) {
+			if ( parent.patternObservers.length ) parent.patternObservers.forEach( o =&gt; o.notify( prev.key ) );
+			parent.deps.forEach( handleChange );
+			prev = parent;
+			parent = parent.parent;
+		}
+	}
+
+	register ( dep ) {
+		this.deps.push( dep );
+	}
+
+	registerChange ( key, value ) {
+		if ( !this.isRoot ) {
+			this.root.registerChange( key, value );
+		} else {
+			this.changes[ key ] = value;
+			runloop.addInstance( this.root.ractive );
+		}
+	}
+
+	registerPatternObserver ( observer ) {
+		this.patternObservers.push( observer );
+		this.register( observer );
+	}
+
+	registerTwowayBinding ( binding ) {
+		this.bindings.push( binding );
+	}
+
+	removeUnresolved ( key, resolver ) {
+		const resolvers = this.unresolvedByKey[ key ];
+
+		if ( resolvers ) {
+			removeFromArray( resolvers, resolver );
+		}
+	}
+
+	retrieve () {
+		return this.parent.value ? this.parent.value[ this.key ] : undefined;
+	}
+
+	set ( value ) {
+		if ( this.ticker ) this.ticker.stop();
+		this.applyValue( value );
+	}
+
+	shuffle ( newIndices ) {
+		const indexModels = [];
+
+		newIndices.forEach( ( newIndex, oldIndex ) =&gt; {
+			if ( newIndex !== oldIndex &amp;&amp; this.childByKey[oldIndex] ) this.childByKey[oldIndex].shuffled();
+
+			if ( !~newIndex ) return;
+
+			const model = this.indexModels[ oldIndex ];
+
+			if ( !model ) return;
+
+			indexModels[ newIndex ] = model;
+
+			if ( newIndex !== oldIndex ) {
+				model.rebind( newIndex );
+			}
+		});
+
+		this.indexModels = indexModels;
+
+		// shuffles need to happen before marks...
+		this.deps.forEach( dep =&gt; {
+			if ( dep.shuffle ) dep.shuffle( newIndices );
+		});
+
+		const upstream = this.length !== this.value.length;
+		this.updateKeypathDependants();
+		this.mark();
+
+		// ...but handleChange must happen after (TODO document why)
+		this.deps.forEach( dep =&gt; {
+			if ( !dep.shuffle ) dep.handleChange();
+		});
+
+		// if the length has changed, notify upstream
+		if ( upstream ) {
+			this.notifyUpstream();
+		}
+	}
+
+	shuffled () {
+		let i = this.children.length;
+		while ( i-- ) {
+			this.children[i].shuffled();
+		}
+		if ( this.wrapper ) {
+			this.wrapper.teardown();
+			this.wrapper = null;
+			this.rewrap = true;
+		}
+	}
+
+	teardown () {
+		this.children.forEach( teardown );
+		if ( this.wrapper ) this.wrapper.teardown();
+		if ( this.keypathModels ) {
+			for ( let k in this.keypathModels ) {
+				this.keypathModels[ k ].teardown();
+			}
+		}
+	}
+
+	unregister ( dependant ) {
+		removeFromArray( this.deps, dependant );
+	}
+
+	unregisterPatternObserver ( observer ) {
+		removeFromArray( this.patternObservers, observer );
+		this.unregister( observer );
+	}
+
+	unregisterTwowayBinding ( binding ) {
+		removeFromArray( this.bindings, binding );
+	}
+
+	updateFromBindings ( cascade ) {
+		let i = this.bindings.length;
+		while ( i-- ) {
+			const value = this.bindings[i].getValue();
+			if ( value !== this.value ) this.set( value );
+		}
+
+		// check for one-way bindings if there are no two-ways
+		if ( !this.bindings.length ) {
+			const oneway = findBoundValue( this.deps );
+			if ( oneway &amp;&amp; oneway.value !== this.value ) this.set( oneway.value );
+		}
+
+		if ( cascade ) {
+			this.children.forEach( updateFromBindings );
+		}
+	}
+
+	updateKeypathDependants () {
+		this.children.forEach( updateKeypathDependants );
+		if ( this.keypathModel ) this.keypathModel.handleChange();
+	}
+}
+
+export function findBoundValue( list ) {
+	let i = list.length;
+	while ( i-- ) {
+		if ( list[i].bound ) {
+			const owner = list[i].owner;
+			if ( owner ) {
+				const value = owner.name === &#039;checked&#039; ?
+					owner.node.checked :
+					owner.node.value;
+				return { value };
+			}
+		}
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

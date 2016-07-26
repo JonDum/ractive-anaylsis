@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/partial/getPartialTemplate.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/partial/getPartialTemplate.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">61.95</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">98</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">30.29</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.49</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { noRegistryFunctionReturn } from &#039;../../../config/errors&#039;;
+import { warnIfDebug } from &#039;../../../utils/log&#039;;
+import parser from &#039;../../../Ractive/config/runtime-parser&#039;;
+import { findInstance } from &#039;../../../shared/registry&#039;;
+import { fillGaps } from &#039;../../../utils/object&#039;;
+
+export default function getPartialTemplate ( ractive, name, parentFragment ) {
+	// If the partial in instance or view heirarchy instances, great
+	let partial = getPartialFromRegistry( ractive, name, parentFragment || {} );
+	if ( partial ) return partial;
+
+	// Does it exist on the page as a script tag?
+	partial = parser.fromId( name, { noThrow: true } );
+	if ( partial ) {
+		// parse and register to this ractive instance
+		let parsed = parser.parseFor( partial, ractive );
+
+		// register extra partials on the ractive instance if they don&#039;t already exist
+		if ( parsed.p ) fillGaps( ractive.partials, parsed.p );
+
+		// register (and return main partial if there are others in the template)
+		return ractive.partials[ name ] = parsed.t;
+	}
+}
+
+function getPartialFromRegistry ( ractive, name, parentFragment ) {
+	// if there was an instance up-hierarchy, cool
+	let partial = findParentPartial( name, parentFragment.owner );
+	if ( partial ) return partial;
+
+	// find first instance in the ractive or view hierarchy that has this partial
+	const instance = findInstance( &#039;partials&#039;, ractive, name );
+
+	if ( !instance ) { return; }
+
+	partial = instance.partials[ name ];
+
+	// partial is a function?
+	let fn;
+	if ( typeof partial === &#039;function&#039; ) {
+		fn = partial.bind( instance );
+		fn.isOwner = instance.partials.hasOwnProperty(name);
+		partial = fn.call( ractive, parser );
+	}
+
+	if ( !partial &amp;&amp; partial !== &#039;&#039; ) {
+		warnIfDebug( noRegistryFunctionReturn, name, &#039;partial&#039;, &#039;partial&#039;, { ractive });
+		return;
+	}
+
+	// If this was added manually to the registry,
+	// but hasn&#039;t been parsed, parse it now
+	if ( !parser.isParsed( partial ) ) {
+		// use the parseOptions of the ractive instance on which it was found
+		let parsed = parser.parseFor( partial, instance );
+
+		// Partials cannot contain nested partials!
+		// TODO add a test for this
+		if ( parsed.p ) {
+			warnIfDebug( &#039;Partials ({{&gt;%s}}) cannot contain nested inline partials&#039;, name, { ractive });
+		}
+
+		// if fn, use instance to store result, otherwise needs to go
+		// in the correct point in prototype chain on instance or constructor
+		let target = fn ? instance : findOwner( instance, name );
+
+		// may be a template with partials, which need to be registered and main template extracted
+		target.partials[ name ] = partial = parsed.t;
+	}
+
+	// store for reset
+	if ( fn ) partial._fn = fn;
+
+	return partial.v ? partial.t : partial;
+}
+
+function findOwner ( ractive, key ) {
+	return ractive.partials.hasOwnProperty( key )
+		? ractive
+		: findConstructor( ractive.constructor, key);
+}
+
+function findConstructor ( constructor, key ) {
+	if ( !constructor ) { return; }
+	return constructor.partials.hasOwnProperty( key )
+		? constructor
+		: findConstructor( constructor._Parent, key );
+}
+
+function findParentPartial( name, parent ) {
+	if ( parent ) {
+		if ( parent.template &amp;&amp; parent.template.p &amp;&amp; parent.template.p[name] ) {
+			return parent.template.p[name];
+		} else if ( parent.parentFragment &amp;&amp; parent.parentFragment.owner ) {
+			return findParentPartial( name, parent.parentFragment.owner );
+		}
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

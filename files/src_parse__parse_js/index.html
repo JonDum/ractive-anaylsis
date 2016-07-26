@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/parse/_parse.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/parse/_parse.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">55.75</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">124</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">27.11</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.98</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { TEMPLATE_VERSION } from &#039;../config/template&#039;;
+import Parser from &#039;./Parser&#039;;
+import readMustache from &#039;./converters/readMustache&#039;;
+import readTriple from &#039;./converters/mustache/readTriple&#039;;
+import readUnescaped from &#039;./converters/mustache/readUnescaped&#039;;
+import readPartial from &#039;./converters/mustache/readPartial&#039;;
+import readMustacheComment from &#039;./converters/mustache/readMustacheComment&#039;;
+import readInterpolator from &#039;./converters/mustache/readInterpolator&#039;;
+import readYielder from &#039;./converters/mustache/readYielder&#039;;
+import readSection from &#039;./converters/mustache/readSection&#039;;
+import readHtmlComment from &#039;./converters/readHtmlComment&#039;;
+import readElement from &#039;./converters/readElement&#039;;
+import readText from &#039;./converters/readText&#039;;
+import readPartialDefinitionComment from &#039;./converters/readPartialDefinitionComment&#039;;
+import readPartialDefinitionSection from &#039;./converters/readPartialDefinitionSection&#039;;
+import readTemplate from &#039;./converters/readTemplate&#039;;
+import cleanup from &#039;./utils/cleanup&#039;;
+import insertExpressions from &#039;./utils/insertExpressions&#039;;
+import { fromComputationString } from &#039;./utils/createFunction&#039;;
+
+// See https://github.com/ractivejs/template-spec for information
+// about the Ractive template specification
+
+let STANDARD_READERS = [ readPartial, readUnescaped, readSection, readYielder, readInterpolator, readMustacheComment ];
+let TRIPLE_READERS = [ readTriple ];
+let STATIC_READERS = [ readUnescaped, readSection, readInterpolator ]; // TODO does it make sense to have a static section?
+
+let StandardParser;
+
+export default function parse ( template, options ) {
+	return new StandardParser( template, options || {} ).result;
+}
+
+parse.computedStrings = function( computed ) {
+	if ( !computed ) return [];
+
+	Object.keys( computed ).forEach( key =&gt; {
+		const value = computed[ key ];
+		if ( typeof value === &#039;string&#039; ) {
+			computed[ key ] = fromComputationString( value );
+		}
+	});
+};
+
+
+export const READERS = [ readMustache, readHtmlComment, readElement, readText ];
+export const PARTIAL_READERS = [ readPartialDefinitionComment, readPartialDefinitionSection ];
+
+StandardParser = Parser.extend({
+	init ( str, options ) {
+		var tripleDelimiters = options.tripleDelimiters || [ &#039;{{{&#039;, &#039;}}}&#039; ],
+			staticDelimiters = options.staticDelimiters || [ &#039;[[&#039;, &#039;]]&#039; ],
+			staticTripleDelimiters = options.staticTripleDelimiters || [ &#039;[[[&#039;, &#039;]]]&#039; ];
+
+		this.standardDelimiters = options.delimiters || [ &#039;{{&#039;, &#039;}}&#039; ];
+
+		this.tags = [
+			{ isStatic: false, isTriple: false, open: this.standardDelimiters[0], close: this.standardDelimiters[1], readers: STANDARD_READERS },
+			{ isStatic: false, isTriple: true,  open: tripleDelimiters[0],        close: tripleDelimiters[1],        readers: TRIPLE_READERS },
+			{ isStatic: true,  isTriple: false, open: staticDelimiters[0],        close: staticDelimiters[1],        readers: STATIC_READERS },
+			{ isStatic: true,  isTriple: true,  open: staticTripleDelimiters[0],  close: staticTripleDelimiters[1],  readers: TRIPLE_READERS }
+		];
+
+		this.sortMustacheTags();
+
+		this.sectionDepth = 0;
+		this.elementStack = [];
+
+		this.interpolate = {
+			script: !options.interpolate || options.interpolate.script !== false,
+			style: !options.interpolate || options.interpolate.style !== false,
+			textarea: true
+		};
+
+		if ( options.sanitize === true ) {
+			options.sanitize = {
+				// blacklist from https://code.google.com/p/google-caja/source/browse/trunk/src/com/google/caja/lang/html/html4-elements-whitelist.json
+				elements: &#039;applet base basefont body frame frameset head html isindex link meta noframes noscript object param script style title&#039;.split( &#039; &#039; ),
+				eventAttributes: true
+			};
+		}
+
+		this.stripComments = options.stripComments !== false;
+		this.preserveWhitespace = options.preserveWhitespace;
+		this.sanitizeElements = options.sanitize &amp;&amp; options.sanitize.elements;
+		this.sanitizeEventAttributes = options.sanitize &amp;&amp; options.sanitize.eventAttributes;
+		this.includeLinePositions = options.includeLinePositions;
+		this.textOnlyMode = options.textOnlyMode;
+		this.csp = options.csp;
+	},
+
+	postProcess ( result ) {
+		// special case - empty string
+		if ( !result.length ) {
+			return { t: [], v: TEMPLATE_VERSION };
+		}
+
+		if ( this.sectionDepth &gt; 0 ) {
+			this.error( &#039;A section was left open&#039; );
+		}
+
+		cleanup( result[0].t, this.stripComments, this.preserveWhitespace, !this.preserveWhitespace, !this.preserveWhitespace );
+
+		if ( this.csp !== false ) {
+			const expr = {};
+			insertExpressions( result[0].t, expr );
+			if ( Object.keys( expr ).length ) result[0].e = expr;
+		}
+
+		return result[0];
+	},
+
+	converters: [
+		readTemplate
+	],
+
+	sortMustacheTags () {
+		// Sort in order of descending opening delimiter length (longer first),
+		// to protect against opening delimiters being substrings of each other
+		this.tags.sort( ( a, b ) =&gt; {
+			return b.open.length - a.open.length;
+		});
+	}
+});</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

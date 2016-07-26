@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/Ractive/config/runtime-parser.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/Ractive/config/runtime-parser.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">71.76</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">96</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">20.83</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.38</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { fromExpression, fromComputationString } from &#039;../../parse/utils/createFunction&#039;;
+import { doc } from &#039;../../config/environment&#039;;
+import { fatal } from &#039;../../utils/log&#039;;
+import { addFunctions } from &#039;../../shared/getFunction&#039;;
+import parse from &#039;../../parse/_parse&#039;;
+
+const parseOptions = [
+	&#039;delimiters&#039;,
+	&#039;tripleDelimiters&#039;,
+	&#039;staticDelimiters&#039;,
+	&#039;staticTripleDelimiters&#039;,
+	&#039;csp&#039;,
+	&#039;interpolate&#039;,
+	&#039;preserveWhitespace&#039;,
+	&#039;sanitize&#039;,
+	&#039;stripComments&#039;
+];
+
+const TEMPLATE_INSTRUCTIONS = `Either preparse or use a ractive runtime source that includes the parser. `;
+
+const COMPUTATION_INSTRUCTIONS = `Either use:
+
+	Ractive.parse.computedStrings( component.computed )
+
+at build time to pre-convert the strings to functions, or use functions instead of strings in computed properties.`;
+
+
+function throwNoParse ( method, error, instructions ) {
+	if ( !method ) {
+		fatal( `Missing Ractive.parse - cannot parse ${error}. ${instructions}` );
+	}
+}
+
+export function createFunction ( body, length ) {
+	throwNoParse( fromExpression, &#039;new expression function&#039;, TEMPLATE_INSTRUCTIONS );
+	return fromExpression( body, length );
+}
+
+export function createFunctionFromString ( str, bindTo ) {
+	throwNoParse( fromComputationString, &#039;compution string &quot;${str}&quot;&#039;, COMPUTATION_INSTRUCTIONS );
+	return fromComputationString( str, bindTo );
+}
+
+const parser = {
+
+	fromId ( id, options ) {
+		if ( !doc ) {
+			if ( options &amp;&amp; options.noThrow ) { return; }
+			throw new Error( `Cannot retrieve template #${id} as Ractive is not running in a browser.` );
+		}
+
+		if ( id ) id = id.replace( /^#/, &#039;&#039; );
+
+		let template;
+
+		if ( !( template = doc.getElementById( id ) )) {
+			if ( options &amp;&amp; options.noThrow ) { return; }
+			throw new Error( `Could not find template element with id #${id}` );
+		}
+
+		if ( template.tagName.toUpperCase() !== &#039;SCRIPT&#039; ) {
+			if ( options &amp;&amp; options.noThrow ) { return; }
+			throw new Error( `Template element with id #${id}, must be a &lt;script&gt; element` );
+		}
+
+		return ( &#039;textContent&#039; in template ? template.textContent : template.innerHTML );
+
+	},
+
+	isParsed ( template) {
+		return !( typeof template === &#039;string&#039; );
+	},
+
+	getParseOptions ( ractive ) {
+		// Could be Ractive or a Component
+		if ( ractive.defaults ) { ractive = ractive.defaults; }
+
+		return parseOptions.reduce( ( val, key ) =&gt; {
+			val[ key ] = ractive[ key ];
+			return val;
+		}, {});
+	},
+
+	parse ( template, options ) {
+		throwNoParse( parse, &#039;template&#039;, TEMPLATE_INSTRUCTIONS );
+		const parsed = parse( template, options );
+		addFunctions( parsed );
+		return parsed;
+	},
+
+	parseFor( template, ractive ) {
+		return this.parse( template, this.getParseOptions( ractive ) );
+	}
+};
+
+export default parser;</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/Element.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/Element.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">70.43</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">432</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">15.45</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.34</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { ATTRIBUTE, BINDING_FLAG, DECORATOR, ELEMENT, EVENT, TRANSITION } from &#039;../../config/types&#039;;
+import runloop from &#039;../../global/runloop&#039;;
+import Item from &#039;./shared/Item&#039;;
+import Fragment from &#039;../Fragment&#039;;
+import ConditionalAttribute from &#039;./element/ConditionalAttribute&#039;;
+import updateLiveQueries from &#039;./element/updateLiveQueries&#039;;
+import { toArray } from &#039;../../utils/array&#039;;
+import { escapeHtml, voidElementNames } from &#039;../../utils/html&#039;;
+import { bind, rebind, render, unbind, update } from &#039;../../shared/methodCallers&#039;;
+import { createElement, detachNode, matches, safeAttributeString, decamelize } from &#039;../../utils/dom&#039;;
+import createItem from &#039;./createItem&#039;;
+import { html, svg } from &#039;../../config/namespaces&#039;;
+import findElement from &#039;./shared/findElement&#039;;
+import { defineProperty } from &#039;../../utils/object&#039;;
+import selectBinding from &#039;./element/binding/selectBinding&#039;;
+
+function makeDirty ( query ) {
+	query.makeDirty();
+}
+
+const endsWithSemi = /;\s*$/;
+
+export default class Element extends Item {
+	constructor ( options ) {
+		super( options );
+
+		this.liveQueries = []; // TODO rare case. can we handle differently?
+
+		this.name = options.template.e.toLowerCase();
+		this.isVoid = voidElementNames.test( this.name );
+
+		// find parent element
+		this.parent = findElement( this.parentFragment, false );
+
+		if ( this.parent &amp;&amp; this.parent.name === &#039;option&#039; ) {
+			throw new Error( `An &lt;option&gt; element cannot contain other elements (encountered &lt;${this.name}&gt;)` );
+		}
+
+		this.decorators = [];
+
+		// create attributes
+		this.attributeByName = {};
+
+		this.attributes = [];
+		( this.template.m || [] ).forEach( template =&gt; {
+			switch ( template.t ) {
+				case ATTRIBUTE:
+				case BINDING_FLAG:
+				case DECORATOR:
+				case EVENT:
+				case TRANSITION:
+					this.attributes.push( createItem({
+						owner: this,
+						parentFragment: this.parentFragment,
+						template
+					}) );
+					break;
+
+				default:
+					this.attributes.push( new ConditionalAttribute({
+						owner: this,
+						parentFragment: this.parentFragment,
+						template
+					}) );
+					break;
+			}
+		});
+
+		let i = this.attributes.length;
+		while ( i-- ) {
+			let attr = this.attributes[ i ];
+			if ( attr.name === &#039;type&#039; ) this.attributes.unshift( this.attributes.splice( i, 1 )[ 0 ] );
+			else if ( attr.name === &#039;max&#039; ) this.attributes.unshift( this.attributes.splice( i, 1 )[ 0 ] );
+			else if ( attr.name === &#039;min&#039; ) this.attributes.unshift( this.attributes.splice( i, 1 )[ 0 ] );
+			else if ( attr.name === &#039;class&#039; ) this.attributes.unshift( this.attributes.splice( i, 1 )[ 0 ] );
+			else if ( attr.name === &#039;value&#039; ) {
+				this.attributes.push( this.attributes.splice( i, 1 )[ 0 ] );
+			}
+		}
+
+		// create children
+		if ( options.template.f &amp;&amp; !options.deferContent ) {
+			this.fragment = new Fragment({
+				template: options.template.f,
+				owner: this,
+				cssIds: null
+			});
+		}
+
+		this.binding = null; // filled in later
+	}
+
+	bind () {
+		this.attributes.binding = true;
+		this.attributes.forEach( bind );
+		this.attributes.binding = false;
+
+		if ( this.fragment ) this.fragment.bind();
+
+		// create two-way binding if necessary
+		if ( !this.binding ) this.recreateTwowayBinding();
+	}
+
+	createTwowayBinding () {
+		const shouldBind = &#039;twoway&#039; in this ? this.twoway : this.ractive.twoway;
+
+		if ( !shouldBind ) return null;
+
+		const Binding = selectBinding( this );
+
+		if ( !Binding ) return null;
+
+		const binding = new Binding( this );
+
+		return binding &amp;&amp; binding.model ?
+			binding :
+			null;
+	}
+
+	destroyed () {
+		this.attributes.forEach( a =&gt; a.destroyed() );
+		if ( this.fragment ) this.fragment.destroyed();
+	}
+
+	detach () {
+		// if this element is no longer rendered, the transitions are complete and the attributes can be torn down
+		if ( !this.rendered ) this.destroyed();
+
+		return detachNode( this.node );
+	}
+
+	find ( selector ) {
+		if ( matches( this.node, selector ) ) return this.node;
+		if ( this.fragment ) {
+			return this.fragment.find( selector );
+		}
+	}
+
+	findAll ( selector, query ) {
+		// Add this node to the query, if applicable, and register the
+		// query on this element
+		const matches = query.test( this.node );
+		if ( matches ) {
+			query.add( this.node );
+			if ( query.live ) this.liveQueries.push( query );
+		}
+
+		if ( this.fragment ) {
+			this.fragment.findAll( selector, query );
+		}
+	}
+
+	findComponent ( name ) {
+		if ( this.fragment ) {
+			return this.fragment.findComponent( name );
+		}
+	}
+
+	findAllComponents ( name, query ) {
+		if ( this.fragment ) {
+			this.fragment.findAllComponents( name, query );
+		}
+	}
+
+	findNextNode () {
+		return null;
+	}
+
+	firstNode () {
+		return this.node;
+	}
+
+	getAttribute ( name ) {
+		const attribute = this.attributeByName[ name ];
+		return attribute ? attribute.getValue() : undefined;
+	}
+
+	rebind () {
+		this.attributes.forEach( rebind );
+
+		if ( this.fragment ) this.fragment.rebind();
+		if ( this.binding ) this.binding.rebind();
+
+		this.liveQueries.forEach( makeDirty );
+	}
+
+	recreateTwowayBinding () {
+		if ( this.binding ) {
+			this.binding.unbind();
+			this.binding.unrender();
+		}
+
+		if ( this.binding = this.createTwowayBinding() ) {
+			this.binding.bind();
+			if ( this.rendered ) this.binding.render();
+		}
+	}
+
+	render ( target, occupants ) {
+		// TODO determine correct namespace
+		this.namespace = getNamespace( this );
+
+		let node;
+		let existing = false;
+
+		if ( occupants ) {
+			let n;
+			while ( ( n = occupants.shift() ) ) {
+				if ( n.nodeName.toUpperCase() === this.template.e.toUpperCase() &amp;&amp; n.namespaceURI === this.namespace ) {
+					this.node = node = n;
+					existing = true;
+					break;
+				} else {
+					detachNode( n );
+				}
+			}
+		}
+
+		if ( !node ) {
+			node = createElement( this.template.e, this.namespace, this.getAttribute( &#039;is&#039; ) );
+			this.node = node;
+		}
+
+		defineProperty( node, &#039;_ractive&#039;, {
+			value: {
+				proxy: this
+			}
+		});
+
+		// Is this a top-level node of a component? If so, we may need to add
+		// a data-ractive-css attribute, for CSS encapsulation
+		if ( this.parentFragment.cssIds ) {
+			node.setAttribute( &#039;data-ractive-css&#039;, this.parentFragment.cssIds.map( x =&gt; `{${x}}` ).join( &#039; &#039; ) );
+		}
+
+		if ( existing &amp;&amp; this.foundNode ) this.foundNode( node );
+
+		if ( this.fragment ) {
+			const children = existing ? toArray( node.childNodes ) : undefined;
+
+			this.fragment.render( node, children );
+
+			// clean up leftover children
+			if ( children ) {
+				children.forEach( detachNode );
+			}
+		}
+
+		if ( existing ) {
+			// store initial values for two-way binding
+			if ( this.binding &amp;&amp; this.binding.wasUndefined ) this.binding.setFromNode( node );
+			// remove unused attributes
+			let i = node.attributes.length;
+			while ( i-- ) {
+				const name = node.attributes[i].name;
+				if ( !( name in this.attributeByName ) ) node.removeAttribute( name );
+			}
+		}
+
+		this.attributes.forEach( render );
+
+		if ( this.binding ) this.binding.render();
+
+		updateLiveQueries( this );
+
+		if ( this._introTransition &amp;&amp; this.ractive.transitionsEnabled ) {
+			this._introTransition.isIntro = true;
+			runloop.registerTransition( this._introTransition );
+		}
+
+		if ( !existing ) {
+			target.appendChild( node );
+		}
+
+		this.rendered = true;
+	}
+
+	toString () {
+		const tagName = this.template.e;
+
+		let attrs = this.attributes.map( stringifyAttribute ).join( &#039;&#039; );
+
+		// Special case - selected options
+		if ( this.name === &#039;option&#039; &amp;&amp; this.isSelected() ) {
+			attrs += &#039; selected&#039;;
+		}
+
+		// Special case - two-way radio name bindings
+		if ( this.name === &#039;input&#039; &amp;&amp; inputIsCheckedRadio( this ) ) {
+			attrs += &#039; checked&#039;;
+		}
+
+		// Special case style and class attributes and directives
+		let style, cls;
+		this.attributes.forEach( attr =&gt; {
+			if ( attr.name === &#039;class&#039; ) {
+				cls = ( cls || &#039;&#039; ) + ( cls ? &#039; &#039; : &#039;&#039; ) + safeAttributeString( attr.getString() );
+			} else if ( attr.name === &#039;style&#039; ) {
+				style = ( style || &#039;&#039; ) + ( style ? &#039; &#039; : &#039;&#039; ) + safeAttributeString( attr.getString() );
+				if ( style &amp;&amp; !endsWithSemi.test( style ) ) style += &#039;;&#039;;
+			} else if ( attr.styleName ) {
+				style = ( style || &#039;&#039; ) + ( style ? &#039; &#039; : &#039;&#039; ) +  `${decamelize( attr.styleName )}: ${safeAttributeString( attr.getString() )};`;
+			} else if ( attr.inlineClass &amp;&amp; attr.getValue() ) {
+				cls = ( cls || &#039;&#039; ) + ( cls ? &#039; &#039; : &#039;&#039; ) + attr.inlineClass;
+			}
+		});
+		// put classes first, then inline style
+		if ( style !== undefined ) attrs = &#039; style&#039; + ( style ? `=&quot;${style}&quot;` : &#039;&#039; ) + attrs;
+		if ( cls !== undefined ) attrs = &#039; class&#039; + (cls ? `=&quot;${cls}&quot;` : &#039;&#039;) + attrs;
+
+		let str = `&lt;${tagName}${attrs}&gt;`;
+
+		if ( this.isVoid ) return str;
+
+		// Special case - textarea
+		if ( this.name === &#039;textarea&#039; &amp;&amp; this.getAttribute( &#039;value&#039; ) !== undefined ) {
+			str += escapeHtml( this.getAttribute( &#039;value&#039; ) );
+		}
+
+		// Special case - contenteditable
+		else if ( this.getAttribute( &#039;contenteditable&#039; ) !== undefined ) {
+			str += ( this.getAttribute( &#039;value&#039; ) || &#039;&#039; );
+		}
+
+		if ( this.fragment ) {
+			str += this.fragment.toString( !/^(?:script|style)$/i.test( this.template.e ) ); // escape text unless script/style
+		}
+
+		str += `&lt;/${tagName}&gt;`;
+		return str;
+	}
+
+	unbind () {
+		this.attributes.forEach( unbind );
+
+		if ( this.binding ) this.binding.unbind();
+		if ( this.fragment ) this.fragment.unbind();
+	}
+
+	unrender ( shouldDestroy ) {
+		if ( !this.rendered ) return;
+		this.rendered = false;
+
+		// unrendering before intro completed? complete it now
+		// TODO should be an API for aborting transitions
+		let transition = this._introTransition;
+		if ( transition &amp;&amp; transition.complete ) transition.complete();
+
+		// Detach as soon as we can
+		if ( this.name === &#039;option&#039; ) {
+			// &lt;option&gt; elements detach immediately, so that
+			// their parent &lt;select&gt; element syncs correctly, and
+			// since option elements can&#039;t have transitions anyway
+			this.detach();
+		} else if ( shouldDestroy ) {
+			runloop.detachWhenReady( this );
+		}
+
+		if ( this.fragment ) this.fragment.unrender();
+
+		if ( this.binding ) this.binding.unrender();
+
+		// outro transition
+		if ( this._outroTransition &amp;&amp; this.ractive.transitionsEnabled ) {
+			this._outroTransition.isIntro = false;
+			runloop.registerTransition( this._outroTransition );
+		}
+
+		removeFromLiveQueries( this );
+		// TODO forms are a special case
+	}
+
+	update () {
+		if ( this.dirty ) {
+			this.dirty = false;
+
+			this.attributes.forEach( update );
+
+			if ( this.fragment ) this.fragment.update();
+		}
+	}
+}
+
+function inputIsCheckedRadio ( element ) {
+	const attributes = element.attributeByName;
+
+	const typeAttribute  = attributes.type;
+	const valueAttribute = attributes.value;
+	const nameAttribute  = attributes.name;
+
+	if ( !typeAttribute || ( typeAttribute.value !== &#039;radio&#039; ) || !valueAttribute || !nameAttribute.interpolator ) {
+		return;
+	}
+
+	if ( valueAttribute.getValue() === nameAttribute.interpolator.model.get() ) {
+		return true;
+	}
+}
+
+function stringifyAttribute ( attribute ) {
+	const str = attribute.toString();
+	return str ? &#039; &#039; + str : &#039;&#039;;
+}
+
+function removeFromLiveQueries ( element ) {
+	let i = element.liveQueries.length;
+	while ( i-- ) {
+		const query = element.liveQueries[i];
+		query.remove( element.node );
+	}
+}
+
+function getNamespace ( element ) {
+	// Use specified namespace...
+	const xmlns = element.getAttribute( &#039;xmlns&#039; );
+	if ( xmlns ) return xmlns;
+
+	// ...or SVG namespace, if this is an &lt;svg&gt; element
+	if ( element.name === &#039;svg&#039; ) return svg;
+
+	const parent = element.parent;
+
+	if ( parent ) {
+		// ...or HTML, if the parent is a &lt;foreignObject&gt;
+		if ( parent.name === &#039;foreignobject&#039; ) return html;
+
+		// ...or inherit from the parent node
+		return parent.node.namespaceURI;
+	}
+
+	return element.ractive.el.namespaceURI;
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

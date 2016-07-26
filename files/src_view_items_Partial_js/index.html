@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/Partial.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/Partial.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">67.62</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">171</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">8.25</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.05</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { warnOnceIfDebug, warnIfDebug } from &#039;../../utils/log&#039;;
+import Mustache from &#039;./shared/Mustache&#039;;
+import Fragment from &#039;../Fragment&#039;;
+import getPartialTemplate from &#039;./partial/getPartialTemplate&#039;;
+import { isArray } from &#039;../../utils/is&#039;;
+import parser from &#039;../../Ractive/config/runtime-parser&#039;;
+import { doInAttributes } from &#039;./element/ConditionalAttribute&#039;;
+
+export default class Partial extends Mustache {
+	bind () {
+		// keep track of the reference name for future resets
+		this.refName = this.template.r;
+
+		// name matches take priority over expressions
+		let template = this.refName ? getPartialTemplate( this.ractive, this.refName, this.parentFragment ) || null : null;
+		let templateObj;
+
+		if ( template ) {
+			this.named = true;
+			this.setTemplate( this.template.r, template );
+		}
+
+		if ( !template ) {
+			super.bind();
+			if ( this.model &amp;&amp; ( templateObj = this.model.get() ) &amp;&amp; typeof templateObj === &#039;object&#039; &amp;&amp; ( typeof templateObj.template === &#039;string&#039; || isArray( templateObj.t ) ) ) {
+				if ( templateObj.template ) {
+					templateObj = parsePartial( this.template.r, templateObj.template, this.ractive );
+				}
+				this.setTemplate( this.template.r, templateObj.t );
+			} else if ( ( !this.model || typeof this.model.get() !== &#039;string&#039; ) &amp;&amp; this.refName ) {
+				this.setTemplate( this.refName, template );
+			} else {
+				this.setTemplate( this.model.get() );
+			}
+		}
+
+		this.fragment = new Fragment({
+			owner: this,
+			template: this.partialTemplate
+		}).bind();
+	}
+
+	destroyed () {
+		this.fragment.destroyed();
+	}
+
+	detach () {
+		return this.fragment.detach();
+	}
+
+	find ( selector ) {
+		return this.fragment.find( selector );
+	}
+
+	findAll ( selector, query ) {
+		this.fragment.findAll( selector, query );
+	}
+
+	findComponent ( name ) {
+		return this.fragment.findComponent( name );
+	}
+
+	findAllComponents ( name, query ) {
+		this.fragment.findAllComponents( name, query );
+	}
+
+	firstNode ( skipParent ) {
+		return this.fragment.firstNode( skipParent );
+	}
+
+	forceResetTemplate () {
+		this.partialTemplate = undefined;
+
+		// on reset, check for the reference name first
+		if ( this.refName ) {
+			this.partialTemplate = getPartialTemplate( this.ractive, this.refName, this.parentFragment );
+		}
+
+		// then look for the resolved name
+		if ( !this.partialTemplate ) {
+			this.partialTemplate = getPartialTemplate( this.ractive, this.name, this.parentFragment );
+		}
+
+		if ( !this.partialTemplate ) {
+			warnOnceIfDebug( `Could not find template for partial &#039;${this.name}&#039;` );
+			this.partialTemplate = [];
+		}
+
+		if ( this.inAttribute ) {
+			doInAttributes( () =&gt; this.fragment.resetTemplate( this.partialTemplate ) );
+		} else {
+			this.fragment.resetTemplate( this.partialTemplate );
+		}
+
+		this.bubble();
+	}
+
+	rebind () {
+		super.unbind();
+		super.bind();
+		this.fragment.rebind();
+	}
+
+	render ( target, occupants ) {
+		this.fragment.render( target, occupants );
+	}
+
+	setTemplate ( name, template ) {
+		this.name = name;
+
+		if ( !template &amp;&amp; template !== null ) template = getPartialTemplate( this.ractive, name, this.parentFragment );
+
+		if ( !template ) {
+			warnOnceIfDebug( `Could not find template for partial &#039;${name}&#039;` );
+		}
+
+		this.partialTemplate = template || [];
+	}
+
+	toString ( escape ) {
+		return this.fragment.toString( escape );
+	}
+
+	unbind () {
+		super.unbind();
+		this.fragment.unbind();
+	}
+
+	unrender ( shouldDestroy ) {
+		this.fragment.unrender( shouldDestroy );
+	}
+
+	update () {
+		let template;
+
+		if ( this.dirty ) {
+			this.dirty = false;
+
+			if ( !this.named ) {
+				if ( this.model ) {
+					template = this.model.get();
+				}
+
+				if ( template &amp;&amp; typeof template === &#039;string&#039; &amp;&amp; template !== this.name ) {
+					this.setTemplate( template );
+					this.fragment.resetTemplate( this.partialTemplate );
+				} else if ( template &amp;&amp; typeof template === &#039;object&#039; &amp;&amp; ( typeof template.template === &#039;string&#039; || isArray( template.t ) ) ) {
+					if ( template.template ) {
+						template = parsePartial( this.name, template.template, this.ractive );
+					}
+					this.setTemplate( this.name, template.t );
+					this.fragment.resetTemplate( this.partialTemplate );
+				}
+			}
+
+			this.fragment.update();
+		}
+	}
+}
+
+function parsePartial( name, partial, ractive ) {
+	let parsed;
+
+	try {
+		parsed = parser.parse( partial, parser.getParseOptions( ractive ) );
+	} catch (e) {
+		warnIfDebug( `Could not parse partial from expression &#039;${name}&#039;\n${e.message}` );
+	}
+
+	return parsed || { t: [] };
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

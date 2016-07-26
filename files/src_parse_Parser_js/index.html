@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/parse/Parser.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/parse/Parser.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">67.62</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">149</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">53.08</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.14</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { create, hasOwn } from &#039;../utils/object&#039;;
+
+var Parser, ParseError, leadingWhitespace = /^\s+/;
+
+ParseError = function ( message ) {
+	this.name = &#039;ParseError&#039;;
+	this.message = message;
+	try {
+		throw new Error(message);
+	} catch (e) {
+		this.stack = e.stack;
+	}
+};
+
+ParseError.prototype = Error.prototype;
+
+Parser = function ( str, options ) {
+	var items, item, lineStart = 0;
+
+	this.str = str;
+	this.options = options || {};
+	this.pos = 0;
+
+	this.lines = this.str.split( &#039;\n&#039; );
+	this.lineEnds = this.lines.map( line =&gt; {
+		var lineEnd = lineStart + line.length + 1; // +1 for the newline
+
+		lineStart = lineEnd;
+		return lineEnd;
+	}, 0 );
+
+	// Custom init logic
+	if ( this.init ) this.init( str, options );
+
+	items = [];
+
+	while ( ( this.pos &lt; this.str.length ) &amp;&amp; ( item = this.read() ) ) {
+		items.push( item );
+	}
+
+	this.leftover = this.remaining();
+	this.result = this.postProcess ? this.postProcess( items, options ) : items;
+};
+
+Parser.prototype = {
+	read: function ( converters ) {
+		var pos, i, len, item;
+
+		if ( !converters ) converters = this.converters;
+
+		pos = this.pos;
+
+		len = converters.length;
+		for ( i = 0; i &lt; len; i += 1 ) {
+			this.pos = pos; // reset for each attempt
+
+			if ( item = converters[i]( this ) ) {
+				return item;
+			}
+		}
+
+		return null;
+	},
+
+	getLinePos: function ( char ) {
+		var lineNum = 0, lineStart = 0, columnNum;
+
+		while ( char &gt;= this.lineEnds[ lineNum ] ) {
+			lineStart = this.lineEnds[ lineNum ];
+			lineNum += 1;
+		}
+
+		columnNum = char - lineStart;
+		return [ lineNum + 1, columnNum + 1, char ]; // line/col should be one-based, not zero-based!
+	},
+
+	error: function ( message ) {
+		let pos = this.getLinePos( this.pos );
+		let lineNum = pos[0];
+		let columnNum = pos[1];
+
+		let line = this.lines[ pos[0] - 1 ];
+		let numTabs = 0;
+		let annotation = line.replace( /\t/g, ( match, char ) =&gt; {
+			if ( char &lt; pos[1] ) {
+				numTabs += 1;
+			}
+
+			return &#039;  &#039;;
+		}) + &#039;\n&#039; + new Array( pos[1] + numTabs ).join( &#039; &#039; ) + &#039;^----&#039;;
+
+		let error = new ParseError( `${message} at line ${lineNum} character ${columnNum}:\n${annotation}` );
+
+		error.line = pos[0];
+		error.character = pos[1];
+		error.shortMessage = message;
+
+		throw error;
+	},
+
+	matchString: function ( string ) {
+		if ( this.str.substr( this.pos, string.length ) === string ) {
+			this.pos += string.length;
+			return string;
+		}
+	},
+
+	matchPattern: function ( pattern ) {
+		var match;
+
+		if ( match = pattern.exec( this.remaining() ) ) {
+			this.pos += match[0].length;
+			return match[1] || match[0];
+		}
+	},
+
+	allowWhitespace: function () {
+		this.matchPattern( leadingWhitespace );
+	},
+
+	remaining: function () {
+		return this.str.substring( this.pos );
+	},
+
+	nextChar: function () {
+		return this.str.charAt( this.pos );
+	}
+};
+
+Parser.extend = function ( proto ) {
+	var Parent = this, Child, key;
+
+	Child = function ( str, options ) {
+		Parser.call( this, str, options );
+	};
+
+	Child.prototype = create( Parent.prototype );
+
+	for ( key in proto ) {
+		if ( hasOwn.call( proto, key ) ) {
+			Child.prototype[ key ] = proto[ key ];
+		}
+	}
+
+	Child.extend = Parser.extend;
+	return Child;
+};
+
+export default Parser;</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

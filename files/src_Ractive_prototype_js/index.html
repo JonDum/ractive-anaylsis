@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/Ractive/prototype.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/Ractive/prototype.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">100.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">93</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">0.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.00</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import add from &#039;./prototype/add&#039;;
+import animate from &#039;./prototype/animate&#039;;
+import detach from &#039;./prototype/detach&#039;;
+import find from &#039;./prototype/find&#039;;
+import findAll from &#039;./prototype/findAll&#039;;
+import findAllComponents from &#039;./prototype/findAllComponents&#039;;
+import findComponent from &#039;./prototype/findComponent&#039;;
+import findContainer from &#039;./prototype/findContainer&#039;;
+import findParent from &#039;./prototype/findParent&#039;;
+import fire from &#039;./prototype/fire&#039;;
+import get from &#039;./prototype/get&#039;;
+import getNodeInfo from &#039;./prototype/getNodeInfo&#039;;
+import insert from &#039;./prototype/insert&#039;;
+import link from &#039;./prototype/link&#039;;
+import merge from &#039;./prototype/merge&#039;;
+import observe from &#039;./prototype/observe&#039;;
+import observeList from &#039;./prototype/observeList&#039;;
+import observeOnce from &#039;./prototype/observeOnce&#039;;
+import off from &#039;./prototype/off&#039;;
+import on from &#039;./prototype/on&#039;;
+import once from &#039;./prototype/once&#039;;
+import pop from &#039;./prototype/pop&#039;;
+import push from &#039;./prototype/push&#039;;
+import render from &#039;./prototype/render&#039;;
+import reset from &#039;./prototype/reset&#039;;
+import resetPartial from &#039;./prototype/resetPartial&#039;;
+import resetTemplate from &#039;./prototype/resetTemplate&#039;;
+import reverse from &#039;./prototype/reverse&#039;;
+import set from &#039;./prototype/set&#039;;
+import shift from &#039;./prototype/shift&#039;;
+import sort from &#039;./prototype/sort&#039;;
+import splice from &#039;./prototype/splice&#039;;
+import subtract from &#039;./prototype/subtract&#039;;
+import teardown from &#039;./prototype/teardown&#039;;
+import toggle from &#039;./prototype/toggle&#039;;
+import toCSS from &#039;./prototype/toCSS&#039;;
+import toHTML from &#039;./prototype/toHTML&#039;;
+import transition from &#039;./prototype/transition&#039;;
+import unlink from &#039;./prototype/unlink&#039;;
+import unrender from &#039;./prototype/unrender&#039;;
+import unshift from &#039;./prototype/unshift&#039;;
+import update from &#039;./prototype/update&#039;;
+import updateModel from &#039;./prototype/updateModel&#039;;
+
+export default {
+	add,
+	animate,
+	detach,
+	find,
+	findAll,
+	findAllComponents,
+	findComponent,
+	findContainer,
+	findParent,
+	fire,
+	get,
+	getNodeInfo,
+	insert,
+	link,
+	merge,
+	observe,
+	observeList,
+	observeOnce,
+	// TODO reinstate these
+	// observeListOnce,
+	off,
+	on,
+	once,
+	pop,
+	push,
+	render,
+	reset,
+	resetPartial,
+	resetTemplate,
+	reverse,
+	set,
+	shift,
+	sort,
+	splice,
+	subtract,
+	teardown,
+	toggle,
+	toCSS,
+	toCss: toCSS,
+	toHTML,
+	toHtml: toHTML,
+	transition,
+	unlink,
+	unrender,
+	unshift,
+	update,
+	updateModel
+};</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

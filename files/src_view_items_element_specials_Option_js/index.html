@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/element/specials/Option.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/element/specials/Option.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">74.95</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">99</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">7.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.02</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import Element from &#039;../../Element&#039;;
+import { removeFromArray } from &#039;../../../../utils/array&#039;;
+import { isArray } from &#039;../../../../utils/is&#039;;
+
+function findParentSelect ( element ) {
+	while ( element ) {
+		if ( element.name === &#039;select&#039; ) return element;
+		element = element.parent;
+	}
+}
+
+export default class Option extends Element {
+	constructor ( options ) {
+		const template = options.template;
+		if ( !template.a ) template.a = {};
+
+		// If the value attribute is missing, use the element&#039;s content,
+		// as long as it isn&#039;t disabled
+		if ( template.a.value === undefined &amp;&amp; !( &#039;disabled&#039; in template.a ) ) {
+			template.a.value = template.f || &#039;&#039;;
+		}
+
+		super( options );
+
+		this.select = findParentSelect( this.parent );
+	}
+
+	bind () {
+		if ( !this.select ) {
+			super.bind();
+			return;
+		}
+
+		// If the select has a value, it overrides the `selected` attribute on
+		// this option - so we delete the attribute
+		const selectedAttribute = this.attributeByName.selected;
+		if ( selectedAttribute &amp;&amp; this.select.getAttribute( &#039;value&#039; ) !== undefined ) {
+			const index = this.attributes.indexOf( selectedAttribute );
+			this.attributes.splice( index, 1 );
+			delete this.attributeByName.selected;
+		}
+
+		super.bind();
+		this.select.options.push( this );
+	}
+
+	bubble () {
+		// if we&#039;re using content as value, may need to update here
+		let value = this.getAttribute( &#039;value&#039; );
+		if ( this.node.value !== value ) {
+			this.node._ractive.value = value;
+		}
+		super.bubble();
+	}
+
+	getAttribute ( name ) {
+		const attribute = this.attributeByName[ name ];
+		return attribute ? attribute.getValue() : name === &#039;value&#039; &amp;&amp; this.fragment ? this.fragment.valueOf() : undefined;
+	}
+
+	isSelected () {
+		const optionValue = this.getAttribute( &#039;value&#039; );
+
+		if ( optionValue === undefined || !this.select ) {
+			return false;
+		}
+
+		const selectValue = this.select.getAttribute( &#039;value&#039; );
+
+		if ( selectValue == optionValue ) {
+			return true;
+		}
+
+		if ( this.select.getAttribute( &#039;multiple&#039; ) &amp;&amp; isArray( selectValue ) ) {
+			let i = selectValue.length;
+			while ( i-- ) {
+				if ( selectValue[i] == optionValue ) {
+					return true;
+				}
+			}
+		}
+	}
+
+	render ( target, occupants ) {
+		super.render( target, occupants );
+
+		if ( !this.attributeByName.value ) {
+			this.node._ractive.value = this.getAttribute( &#039;value&#039; );
+		}
+	}
+
+	unbind () {
+		super.unbind();
+
+		if ( this.select ) {
+			removeFromArray( this.select.options, this );
+		}
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

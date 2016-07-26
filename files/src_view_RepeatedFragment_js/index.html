@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/RepeatedFragment.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/RepeatedFragment.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">100.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">420</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">0.00</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.00</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import Fragment from &#039;./Fragment&#039;;
+import { createDocumentFragment } from &#039;../utils/dom&#039;;
+import { isArray, isObject } from &#039;../utils/is&#039;;
+import { toEscapedString, toString, unbind, unrender, unrenderAndDestroy, update } from &#039;../shared/methodCallers&#039;;
+
+export default class RepeatedFragment {
+	constructor ( options ) {
+		this.parent = options.owner.parentFragment;
+
+		// bit of a hack, so reference resolution works without another
+		// layer of indirection
+		this.parentFragment = this;
+		this.owner = options.owner;
+		this.ractive = this.parent.ractive;
+
+		// encapsulated styles should be inherited until they get applied by an element
+		this.cssIds = &#039;cssIds&#039; in options ? options.cssIds : ( this.parent ? this.parent.cssIds : null );
+
+		this.context = null;
+		this.rendered = false;
+		this.iterations = [];
+
+		this.template = options.template;
+
+		this.indexRef = options.indexRef;
+		this.keyRef = options.keyRef;
+
+		this.pendingNewIndices = null;
+		this.previousIterations = null;
+
+		// track array versus object so updates of type rest
+		this.isArray = false;
+	}
+
+	bind ( context ) {
+		this.context = context;
+		const value = context.get();
+
+		// {{#each array}}...
+		if ( this.isArray = isArray( value ) ) {
+			// we can&#039;t use map, because of sparse arrays
+			this.iterations = [];
+			for ( let i = 0; i &lt; value.length; i += 1 ) {
+				this.iterations[i] = this.createIteration( i, i );
+			}
+		}
+
+		// {{#each object}}...
+		else if ( isObject( value ) ) {
+			this.isArray = false;
+
+			// TODO this is a dreadful hack. There must be a neater way
+			if ( this.indexRef ) {
+				const refs = this.indexRef.split( &#039;,&#039; );
+				this.keyRef = refs[0];
+				this.indexRef = refs[1];
+			}
+
+			this.iterations = Object.keys( value ).map( ( key, index ) =&gt; {
+				return this.createIteration( key, index );
+			});
+		}
+
+		return this;
+	}
+
+	bubble () {
+		this.owner.bubble();
+	}
+
+	createIteration ( key, index ) {
+		const fragment = new Fragment({
+			owner: this,
+			template: this.template
+		});
+
+		// TODO this is a bit hacky
+		fragment.key = key;
+		fragment.index = index;
+		fragment.isIteration = true;
+
+		const model = this.context.joinKey( key );
+
+		// set up an iteration alias if there is one
+		if ( this.owner.template.z ) {
+			fragment.aliases = {};
+			fragment.aliases[ this.owner.template.z[0].n ] = model;
+		}
+
+		return fragment.bind( model );
+	}
+
+	destroyed () {
+		this.iterations.forEach( i =&gt; i.destroyed() );
+	}
+
+	detach () {
+		const docFrag = createDocumentFragment();
+		this.iterations.forEach( fragment =&gt; docFrag.appendChild( fragment.detach() ) );
+		return docFrag;
+	}
+
+	find ( selector ) {
+		const len = this.iterations.length;
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			const found = this.iterations[i].find( selector );
+			if ( found ) return found;
+		}
+	}
+
+	findAll ( selector, query ) {
+		const len = this.iterations.length;
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			this.iterations[i].findAll( selector, query );
+		}
+	}
+
+	findComponent ( name ) {
+		const len = this.iterations.length;
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			const found = this.iterations[i].findComponent( name );
+			if ( found ) return found;
+		}
+	}
+
+	findAllComponents ( name, query ) {
+		const len = this.iterations.length;
+		let i;
+
+		for ( i = 0; i &lt; len; i += 1 ) {
+			this.iterations[i].findAllComponents( name, query );
+		}
+	}
+
+	findNextNode ( iteration ) {
+		if ( iteration.index &lt; this.iterations.length - 1 ) {
+			for ( let i = iteration.index + 1; i &lt; this.iterations.length; i++ ) {
+				let node = this.iterations[ i ].firstNode( true );
+				if ( node ) return node;
+			}
+		}
+
+		return this.owner.findNextNode();
+	}
+
+	firstNode ( skipParent ) {
+		return this.iterations[0] ? this.iterations[0].firstNode( skipParent ) : null;
+	}
+
+	rebind ( context ) {
+		this.context = context;
+
+		this.iterations.forEach( ( fragment ) =&gt; {
+			const model = context.joinKey( fragment.key || fragment.index );
+			if ( this.owner.template.z ) {
+				fragment.aliases = {};
+				fragment.aliases[ this.owner.template.z[0].n ] = model;
+			}
+			fragment.rebind( model );
+		});
+	}
+
+	render ( target, occupants ) {
+		// TODO use docFrag.cloneNode...
+
+		if ( this.iterations ) {
+			this.iterations.forEach( fragment =&gt; fragment.render( target, occupants ) );
+		}
+
+		this.rendered = true;
+	}
+
+	shuffle ( newIndices ) {
+		if ( !this.pendingNewIndices ) this.previousIterations = this.iterations.slice();
+
+		if ( !this.pendingNewIndices ) this.pendingNewIndices = [];
+
+		this.pendingNewIndices.push( newIndices );
+
+		const iterations = [];
+
+		newIndices.forEach( ( newIndex, oldIndex ) =&gt; {
+			if ( newIndex === -1 ) return;
+
+			const fragment = this.iterations[ oldIndex ];
+			iterations[ newIndex ] = fragment;
+
+			if ( newIndex !== oldIndex &amp;&amp; fragment ) fragment.dirty = true;
+		});
+
+		this.iterations = iterations;
+
+		this.bubble();
+	}
+
+	toString ( escape ) {
+		return this.iterations ?
+			this.iterations.map( escape ? toEscapedString : toString ).join( &#039;&#039; ) :
+			&#039;&#039;;
+	}
+
+	unbind () {
+		this.iterations.forEach( unbind );
+		return this;
+	}
+
+	unrender ( shouldDestroy ) {
+		this.iterations.forEach( shouldDestroy ? unrenderAndDestroy : unrender );
+		if ( this.pendingNewIndices &amp;&amp; this.previousIterations ) {
+			this.previousIterations.forEach( fragment =&gt; {
+				if ( fragment.rendered ) shouldDestroy ? unrenderAndDestroy( fragment ) : unrender( fragment );
+			});
+		}
+		this.rendered = false;
+	}
+
+	// TODO smart update
+	update () {
+		// skip dirty check, since this is basically just a facade
+
+		if ( this.pendingNewIndices ) {
+			this.updatePostShuffle();
+			return;
+		}
+
+		if ( this.updating ) return;
+		this.updating = true;
+
+		const value = this.context.get(),
+			  wasArray = this.isArray;
+
+		let toRemove;
+		let oldKeys;
+		let reset = true;
+		let i;
+
+		if ( this.isArray = isArray( value ) ) {
+			if ( wasArray ) {
+				reset = false;
+				if ( this.iterations.length &gt; value.length ) {
+					toRemove = this.iterations.splice( value.length );
+				}
+			}
+		} else if ( isObject( value ) &amp;&amp; !wasArray ) {
+			reset = false;
+			toRemove = [];
+			oldKeys = {};
+			i = this.iterations.length;
+
+			while ( i-- ) {
+				const fragment = this.iterations[i];
+				if ( fragment.key in value ) {
+					oldKeys[ fragment.key ] = true;
+				} else {
+					this.iterations.splice( i, 1 );
+					toRemove.push( fragment );
+				}
+			}
+		}
+
+		if ( reset ) {
+			toRemove = this.iterations;
+			this.iterations = [];
+		}
+
+		if ( toRemove ) {
+			toRemove.forEach( fragment =&gt; {
+				fragment.unbind();
+				fragment.unrender( true );
+			});
+		}
+
+		// update the remaining ones
+		this.iterations.forEach( update );
+
+		// add new iterations
+		const newLength = isArray( value ) ?
+			value.length :
+			isObject( value ) ?
+				Object.keys( value ).length :
+				0;
+
+		let docFrag;
+		let fragment;
+
+		if ( newLength &gt; this.iterations.length ) {
+			docFrag = this.rendered ? createDocumentFragment() : null;
+			i = this.iterations.length;
+
+			if ( isArray( value ) ) {
+				while ( i &lt; value.length ) {
+					fragment = this.createIteration( i, i );
+
+					this.iterations.push( fragment );
+					if ( this.rendered ) fragment.render( docFrag );
+
+					i += 1;
+				}
+			}
+
+			else if ( isObject( value ) ) {
+				// TODO this is a dreadful hack. There must be a neater way
+				if ( this.indexRef &amp;&amp; !this.keyRef ) {
+					const refs = this.indexRef.split( &#039;,&#039; );
+					this.keyRef = refs[0];
+					this.indexRef = refs[1];
+				}
+
+				Object.keys( value ).forEach( key =&gt; {
+					if ( !oldKeys || !( key in oldKeys ) ) {
+						fragment = this.createIteration( key, i );
+
+						this.iterations.push( fragment );
+						if ( this.rendered ) fragment.render( docFrag );
+
+						i += 1;
+					}
+				});
+			}
+
+			if ( this.rendered ) {
+				const parentNode = this.parent.findParentNode();
+				const anchor = this.parent.findNextNode( this.owner );
+
+				parentNode.insertBefore( docFrag, anchor );
+			}
+		}
+
+		this.updating = false;
+	}
+
+	updatePostShuffle () {
+		const newIndices = this.pendingNewIndices[ 0 ];
+
+		// map first shuffle through
+		this.pendingNewIndices.slice( 1 ).forEach( indices =&gt; {
+			newIndices.forEach( ( newIndex, oldIndex ) =&gt; {
+				newIndices[ oldIndex ] = indices[ newIndex ];
+			});
+		});
+
+		// This algorithm (for detaching incorrectly-ordered fragments from the DOM and
+		// storing them in a document fragment for later reinsertion) seems a bit hokey,
+		// but it seems to work for now
+		const len = this.context.get().length, oldLen = this.previousIterations.length;
+		let i;
+		const removed = {};
+
+		newIndices.forEach( ( newIndex, oldIndex ) =&gt; {
+			const fragment = this.previousIterations[ oldIndex ];
+
+			if ( newIndex === -1 ) {
+				removed[ oldIndex ] = fragment;
+			} else if ( fragment.index !== newIndex ) {
+				fragment.index = newIndex;
+				const model = this.context.joinKey( newIndex );
+				if ( this.owner.template.z ) {
+					fragment.aliases = {};
+					fragment.aliases[ this.owner.template.z[0].n ] = model;
+				}
+				fragment.rebind( model );
+			}
+		});
+
+		// create new/move existing iterations
+		const docFrag = this.rendered ? createDocumentFragment() : null;
+		const parentNode = this.rendered ? this.parent.findParentNode() : null;
+
+		const contiguous = &#039;startIndex&#039; in newIndices;
+		i = contiguous ? newIndices.startIndex : 0;
+
+		for ( i; i &lt; len; i++ ) {
+			const frag = this.iterations[i];
+
+			if ( frag &amp;&amp; contiguous ) {
+				// attach any built-up iterations
+				if ( this.rendered ) {
+					if ( removed[i] ) docFrag.appendChild( removed[i].detach() );
+					if ( docFrag.childNodes.length  ) parentNode.insertBefore( docFrag, frag.firstNode() );
+				}
+				continue;
+			}
+
+			if ( !frag ) this.iterations[i] = this.createIteration( i, i );
+
+			if ( this.rendered ) {
+				if ( removed[i] ) docFrag.appendChild( removed[i].detach() );
+
+				if ( frag ) docFrag.appendChild( frag.detach() );
+				else {
+					this.iterations[i].render( docFrag );
+				}
+			}
+		}
+
+		// append any leftovers
+		if ( this.rendered ) {
+			for ( i = len; i &lt; oldLen; i++ ) {
+				if ( removed[i] ) docFrag.appendChild( removed[i].detach() );
+			}
+
+			if ( docFrag.childNodes.length ) {
+				parentNode.insertBefore( docFrag, this.owner.findNextNode() );
+			}
+		}
+
+		// trigger removal on old nodes
+		Object.keys( removed ).forEach( k =&gt; removed[k].unbind().unrender( true ) );
+
+		this.iterations.forEach( update );
+
+		this.pendingNewIndices = null;
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

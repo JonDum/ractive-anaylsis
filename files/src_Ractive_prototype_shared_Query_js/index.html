@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/Ractive/prototype/shared/Query.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/Ractive/prototype/shared/Query.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">60.42</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">147</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">33.01</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.52</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import runloop from &#039;../../../global/runloop&#039;;
+import { lastItem } from &#039;../../../utils/array&#039;;
+import { matches } from &#039;../../../utils/dom&#039;;
+
+function sortByDocumentPosition ( node, otherNode ) {
+	if ( node.compareDocumentPosition ) {
+		const bitmask = node.compareDocumentPosition( otherNode );
+		return ( bitmask &amp; 2 ) ? 1 : -1;
+	}
+
+	// In old IE, we can piggy back on the mechanism for
+	// comparing component positions
+	return sortByItemPosition( node, otherNode );
+}
+
+function sortByItemPosition ( a, b ) {
+	const ancestryA = getAncestry( a.component || a._ractive.proxy );
+	const ancestryB = getAncestry( b.component || b._ractive.proxy );
+
+	let oldestA = lastItem( ancestryA );
+	let oldestB = lastItem( ancestryB );
+	let mutualAncestor;
+
+	// remove items from the end of both ancestries as long as they are identical
+	// - the final one removed is the closest mutual ancestor
+	while ( oldestA &amp;&amp; ( oldestA === oldestB ) ) {
+		ancestryA.pop();
+		ancestryB.pop();
+
+		mutualAncestor = oldestA;
+
+		oldestA = lastItem( ancestryA );
+		oldestB = lastItem( ancestryB );
+	}
+
+	// now that we have the mutual ancestor, we can find which is earliest
+	oldestA = oldestA.component || oldestA;
+	oldestB = oldestB.component || oldestB;
+
+	const fragmentA = oldestA.parentFragment;
+	const fragmentB = oldestB.parentFragment;
+
+	// if both items share a parent fragment, our job is easy
+	if ( fragmentA === fragmentB ) {
+		const indexA = fragmentA.items.indexOf( oldestA );
+		const indexB = fragmentB.items.indexOf( oldestB );
+
+		// if it&#039;s the same index, it means one contains the other,
+		// so we see which has the longest ancestry
+		return ( indexA - indexB ) || ancestryA.length - ancestryB.length;
+	}
+
+	// if mutual ancestor is a section, we first test to see which section
+	// fragment comes first
+	const fragments = mutualAncestor.iterations;
+	if ( fragments ) {
+		const indexA = fragments.indexOf( fragmentA );
+		const indexB = fragments.indexOf( fragmentB );
+
+		return ( indexA - indexB ) || ancestryA.length - ancestryB.length;
+	}
+
+	throw new Error( &#039;An unexpected condition was met while comparing the position of two components. Please file an issue at https://github.com/ractivejs/ractive/issues - thanks!&#039; );
+}
+
+function getParent ( item ) {
+	let parentFragment = item.parentFragment;
+
+	if ( parentFragment ) return parentFragment.owner;
+
+	if ( item.component &amp;&amp; ( parentFragment = item.component.parentFragment ) ) {
+		return parentFragment.owner;
+	}
+}
+
+function getAncestry ( item ) {
+	let ancestry = [ item ];
+	let ancestor = getParent( item );
+
+	while ( ancestor ) {
+		ancestry.push( ancestor );
+		ancestor = getParent( ancestor );
+	}
+
+	return ancestry;
+}
+
+
+export default class Query {
+	constructor ( ractive, selector, live, isComponentQuery ) {
+		this.ractive = ractive;
+		this.selector = selector;
+		this.live = live;
+		this.isComponentQuery = isComponentQuery;
+
+		this.result = [];
+
+		this.dirty = true;
+	}
+
+	add ( item ) {
+		this.result.push( item );
+		this.makeDirty();
+	}
+
+	cancel () {
+		let liveQueries = this._root[ this.isComponentQuery ? &#039;liveComponentQueries&#039; : &#039;liveQueries&#039; ];
+		const selector = this.selector;
+
+		const index = liveQueries.indexOf( selector );
+
+		if ( index !== -1 ) {
+			liveQueries.splice( index, 1 );
+			liveQueries[ selector ] = null;
+		}
+	}
+
+	init () {
+		this.dirty = false;
+	}
+
+	makeDirty () {
+		if ( !this.dirty ) {
+			this.dirty = true;
+
+			// Once the DOM has been updated, ensure the query
+			// is correctly ordered
+			runloop.scheduleTask( () =&gt; this.update() );
+		}
+	}
+
+	remove ( nodeOrComponent ) {
+		const index = this.result.indexOf( this.isComponentQuery ? nodeOrComponent.instance : nodeOrComponent );
+		if ( index !== -1 ) this.result.splice( index, 1 );
+	}
+
+	update () {
+		this.result.sort( this.isComponentQuery ? sortByItemPosition : sortByDocumentPosition );
+		this.dirty = false;
+	}
+
+	test ( item ) {
+		return this.isComponentQuery ?
+			( !this.selector || item.name === this.selector ) :
+			( item ? matches( item, this.selector ) : null );
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

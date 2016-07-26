@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/triple/insertHtml.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/triple/insertHtml.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">89.05</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">94</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">8.35</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.12</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { svg } from &#039;../../../config/namespaces&#039;;
+import { createElement } from &#039;../../../utils/dom&#039;;
+
+let elementCache = {};
+
+let ieBug;
+let ieBlacklist;
+
+try {
+	createElement( &#039;table&#039; ).innerHTML = &#039;foo&#039;;
+} catch ( err ) {
+	ieBug = true;
+
+	ieBlacklist = {
+		TABLE:  [ &#039;&lt;table class=&quot;x&quot;&gt;&#039;, &#039;&lt;/table&gt;&#039; ],
+		THEAD:  [ &#039;&lt;table&gt;&lt;thead class=&quot;x&quot;&gt;&#039;, &#039;&lt;/thead&gt;&lt;/table&gt;&#039; ],
+		TBODY:  [ &#039;&lt;table&gt;&lt;tbody class=&quot;x&quot;&gt;&#039;, &#039;&lt;/tbody&gt;&lt;/table&gt;&#039; ],
+		TR:     [ &#039;&lt;table&gt;&lt;tr class=&quot;x&quot;&gt;&#039;, &#039;&lt;/tr&gt;&lt;/table&gt;&#039; ],
+		SELECT: [ &#039;&lt;select class=&quot;x&quot;&gt;&#039;, &#039;&lt;/select&gt;&#039; ]
+	};
+}
+
+export default function ( html, node, docFrag ) {
+	let nodes = [];
+
+	// render 0 and false
+	if ( html == null || html === &#039;&#039; ) return nodes;
+
+	let container;
+	let wrapper;
+	let selectedOption;
+
+	if ( ieBug &amp;&amp; ( wrapper = ieBlacklist[ node.tagName ] ) ) {
+		container = element( &#039;DIV&#039; );
+		container.innerHTML = wrapper[0] + html + wrapper[1];
+		container = container.querySelector( &#039;.x&#039; );
+
+		if ( container.tagName === &#039;SELECT&#039; ) {
+			selectedOption = container.options[ container.selectedIndex ];
+		}
+	}
+
+	else if ( node.namespaceURI === svg ) {
+		container = element( &#039;DIV&#039; );
+		container.innerHTML = &#039;&lt;svg class=&quot;x&quot;&gt;&#039; + html + &#039;&lt;/svg&gt;&#039;;
+		container = container.querySelector( &#039;.x&#039; );
+	}
+
+	else if ( node.tagName === &#039;TEXTAREA&#039; ) {
+		container = createElement( &#039;div&#039; );
+
+		if ( typeof container.textContent !== &#039;undefined&#039; ) {
+			container.textContent = html;
+		} else {
+			container.innerHTML = html;
+		}
+	}
+
+	else {
+		container = element( node.tagName );
+		container.innerHTML = html;
+
+		if ( container.tagName === &#039;SELECT&#039; ) {
+			selectedOption = container.options[ container.selectedIndex ];
+		}
+	}
+
+	let child;
+	while ( child = container.firstChild ) {
+		nodes.push( child );
+		docFrag.appendChild( child );
+	}
+
+	// This is really annoying. Extracting &lt;option&gt; nodes from the
+	// temporary container &lt;select&gt; causes the remaining ones to
+	// become selected. So now we have to deselect them. IE8, you
+	// amaze me. You really do
+	// ...and now Chrome too
+	let i;
+	if ( node.tagName === &#039;SELECT&#039; ) {
+		i = nodes.length;
+		while ( i-- ) {
+			if ( nodes[i] !== selectedOption ) {
+				nodes[i].selected = false;
+			}
+		}
+	}
+
+	return nodes;
+}
+
+function element ( tagName ) {
+	return elementCache[ tagName ] || ( elementCache[ tagName ] = createElement( tagName ) );
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

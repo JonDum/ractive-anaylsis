@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/element/Decorator.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/element/Decorator.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">80.74</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">209</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">2.40</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.01</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { findInViewHierarchy } from &#039;../../../shared/registry&#039;;
+import findElement from &#039;../shared/findElement&#039;;
+import { warnOnce } from &#039;../../../utils/log&#039;;
+import { missingPlugin } from &#039;../../../config/errors&#039;;
+import { unbind } from &#039;../../../shared/methodCallers&#039;;
+import Fragment from &#039;../../Fragment&#039;;
+import noop from &#039;../../../utils/noop&#039;;
+import runloop from &#039;../../../global/runloop&#039;;
+import { removeFromArray } from &#039;../../../utils/array&#039;;
+import getFunction from &#039;../../../shared/getFunction&#039;;
+import resolveReference from &#039;../../resolvers/resolveReference&#039;;
+
+const missingDecorator = {
+	update: noop,
+	teardown: noop
+};
+
+export default class Decorator {
+	constructor ( options ) {
+		this.owner = options.owner || options.parentFragment.owner || findElement( options.parentFragment );
+		this.element = this.owner.attributeByName ? this.owner : findElement( options.parentFragment );
+		this.parentFragment = this.owner.parentFragment;
+		this.ractive = this.owner.ractive;
+		let template = this.template = options.template;
+
+		this.dynamicName = typeof template.f.n === &#039;object&#039;;
+		this.dynamicArgs = !!template.f.d;
+
+		if ( this.dynamicName ) {
+			this.nameFragment = new Fragment({
+				owner: this,
+				template: template.f.n
+			});
+		} else {
+			this.name = template.f.n || template.f;
+		}
+
+		if ( this.dynamicArgs ) {
+			this.argsFragment = new Fragment({
+				owner: this,
+				template: template.f.d
+			});
+		} else {
+			if ( template.f.a &amp;&amp; template.f.a.s ) {
+				this.args = [];
+			} else {
+				this.args = template.f.a || [];
+			}
+		}
+
+		this.node = null;
+		this.intermediary = null;
+
+		this.element.decorators.push( this );
+	}
+
+	bind () {
+		if ( this.dynamicName ) {
+			this.nameFragment.bind();
+			this.name = this.nameFragment.toString();
+		}
+
+		if ( this.dynamicArgs ) this.argsFragment.bind();
+
+		// TODO: dry this up once deprecation is done
+		if ( this.template.f.a &amp;&amp; this.template.f.a.s ) {
+			this.resolvers = [];
+			this.models = this.template.f.a.r.map( ( ref, i ) =&gt; {
+				let resolver;
+				const model = resolveReference( this.parentFragment, ref );
+				if ( !model ) {
+					resolver = this.parentFragment.resolve( ref, model =&gt; {
+						this.models[i] = model;
+						removeFromArray( this.resolvers, resolver );
+						model.register( this );
+					});
+
+					this.resolvers.push( resolver );
+				} else model.register( this );
+
+				return model;
+			});
+			this.argsFn = getFunction( this.template.f.a.s, this.template.f.a.r.length );
+		}
+	}
+
+	bubble () {
+		if ( !this.dirty ) {
+			this.dirty = true;
+			this.owner.bubble();
+		}
+	}
+
+	destroyed () {
+		if ( this.intermediary ) this.intermediary.teardown();
+	}
+
+	handleChange () { this.bubble(); }
+
+	rebind () {
+		if ( this.dynamicName ) this.nameFragment.rebind();
+		if ( this.dynamicArgs ) this.argsFragment.rebind();
+		if ( this.argsFn ) {
+			this.unbind();
+			this.bind();
+			if ( this.rendered ) this.update();
+		}
+	}
+
+	render () {
+		runloop.scheduleTask( () =&gt; {
+			const fn = findInViewHierarchy( &#039;decorators&#039;, this.ractive, this.name );
+
+			if ( !fn ) {
+				warnOnce( missingPlugin( this.name, &#039;decorator&#039; ) );
+				this.intermediary = missingDecorator;
+				return;
+			}
+
+			this.node = this.element.node;
+
+			let args;
+			if ( this.argsFn ) {
+				args = this.models.map( model =&gt; {
+					if ( !model ) return undefined;
+
+					return model.get();
+				});
+				args = this.argsFn.apply( this.ractive, args );
+			} else {
+				args = this.dynamicArgs ? this.argsFragment.getArgsList() : this.args;
+			}
+
+			this.intermediary = fn.apply( this.ractive, [ this.node ].concat( args ) );
+
+			if ( !this.intermediary || !this.intermediary.teardown ) {
+				throw new Error( `The &#039;${this.name}&#039; decorator must return an object with a teardown method` );
+			}
+		}, true );
+		this.rendered = true;
+	}
+
+	toString () { return &#039;&#039;; }
+
+	unbind () {
+		if ( this.dynamicName ) this.nameFragment.unbind();
+		if ( this.dynamicArgs ) this.argsFragment.unbind();
+		if ( this.resolvers ) this.resolvers.forEach( unbind );
+		if ( this.models ) this.models.forEach( m =&gt; {
+			if ( m ) m.unregister( this );
+		});
+	}
+
+	unrender ( shouldDestroy ) {
+		if ( ( !shouldDestroy || this.element.rendered ) &amp;&amp; this.intermediary ) this.intermediary.teardown();
+		this.rendered = false;
+	}
+
+	update () {
+		if ( !this.dirty ) return;
+
+		this.dirty = false;
+
+		let nameChanged = false;
+
+		if ( this.dynamicName &amp;&amp; this.nameFragment.dirty ) {
+			const name = this.nameFragment.toString();
+			nameChanged = name !== this.name;
+			this.name = name;
+		}
+
+		if ( this.intermediary ) {
+			if ( nameChanged || !this.intermediary.update ) {
+				this.unrender();
+				this.render();
+			}
+			else {
+				if ( this.dynamicArgs ) {
+					if ( this.argsFragment.dirty ) {
+						const args = this.argsFragment.getArgsList();
+						this.intermediary.update.apply( this.ractive, args );
+					}
+				}
+				else if ( this.argsFn ) {
+					const args = this.models.map( model =&gt; {
+						if ( !model ) return undefined;
+
+						return model.get();
+					});
+					this.intermediary.update.apply( this.ractive, this.argsFn.apply( this.ractive, args ) );
+				}
+				else {
+					this.intermediary.update.apply( this.ractive, this.args );
+				}
+			}
+		}
+
+		// need to run these for unrender/render cases
+		// so can&#039;t just be in conditional if above
+
+		if ( this.dynamicName &amp;&amp; this.nameFragment.dirty ) {
+			this.nameFragment.update();
+		}
+
+		if ( this.dynamicArgs &amp;&amp; this.argsFragment.dirty ) {
+			this.argsFragment.update();
+		}
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

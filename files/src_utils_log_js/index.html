@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/utils/log.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/utils/log.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">83.65</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">121</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">17.61</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.26</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">/* global console */
+import { hasConsole } from &#039;../config/environment&#039;;
+import Ractive from &#039;../Ractive&#039;;
+import noop from &#039;./noop&#039;;
+
+var alreadyWarned = {}, log, printWarning, welcome;
+
+if ( hasConsole ) {
+	let welcomeIntro = [
+		`%cRactive.js %c&lt;@version@&gt; %cin debug mode, %cmore...`,
+		&#039;color: rgb(114, 157, 52); font-weight: normal;&#039;,
+		&#039;color: rgb(85, 85, 85); font-weight: normal;&#039;,
+		&#039;color: rgb(85, 85, 85); font-weight: normal;&#039;,
+		&#039;color: rgb(82, 140, 224); font-weight: normal; text-decoration: underline;&#039;
+	];
+	let welcomeMessage = `You&#039;re running Ractive &lt;@version@&gt; in debug mode - messages will be printed to the console to help you fix problems and optimise your application.
+
+To disable debug mode, add this line at the start of your app:
+  Ractive.DEBUG = false;
+
+To disable debug mode when your app is minified, add this snippet:
+  Ractive.DEBUG = /unminified/.test(function(){/*unminified*/});
+
+Get help and support:
+  http://docs.ractivejs.org
+  http://stackoverflow.com/questions/tagged/ractivejs
+  http://groups.google.com/forum/#!forum/ractive-js
+  http://twitter.com/ractivejs
+
+Found a bug? Raise an issue:
+  https://github.com/ractivejs/ractive/issues
+
+`;
+
+	welcome = () =&gt; {
+		let hasGroup = !!console.groupCollapsed;
+		console[ hasGroup ? &#039;groupCollapsed&#039; : &#039;log&#039; ].apply( console, welcomeIntro );
+		console.log( welcomeMessage );
+		if ( hasGroup ) {
+			console.groupEnd( welcomeIntro );
+		}
+
+		welcome = noop;
+	};
+
+	printWarning = ( message, args ) =&gt; {
+		welcome();
+
+		// extract information about the instance this message pertains to, if applicable
+		if ( typeof args[ args.length - 1 ] === &#039;object&#039; ) {
+			let options = args.pop();
+			let ractive = options ? options.ractive : null;
+
+			if ( ractive ) {
+				// if this is an instance of a component that we know the name of, add
+				// it to the message
+				let name;
+				if ( ractive.component &amp;&amp; ( name = ractive.component.name ) ) {
+					message = `&lt;${name}&gt; ${message}`;
+				}
+
+				let node;
+				if ( node = ( options.node || ( ractive.fragment &amp;&amp; ractive.fragment.rendered &amp;&amp; ractive.find( &#039;*&#039; ) ) ) ) {
+					args.push( node );
+				}
+			}
+		}
+
+		console.warn.apply( console, [ &#039;%cRactive.js: %c&#039; + message, &#039;color: rgb(114, 157, 52);&#039;, &#039;color: rgb(85, 85, 85);&#039; ].concat( args ) );
+	};
+
+	log = function () {
+		console.log.apply( console, arguments );
+	};
+} else {
+	printWarning = log = welcome = noop;
+}
+
+function format ( message, args ) {
+	return message.replace( /%s/g, () =&gt; args.shift() );
+}
+
+function fatal ( message, ...args ) {
+	message = format( message, args );
+	throw new Error( message );
+}
+
+function logIfDebug () {
+	if ( Ractive.DEBUG ) {
+		log.apply( null, arguments );
+	}
+}
+
+function warn ( message, ...args ) {
+	message = format( message, args );
+	printWarning( message, args );
+}
+
+function warnOnce ( message, ...args ) {
+	message = format( message, args );
+
+	if ( alreadyWarned[ message ] ) {
+		return;
+	}
+
+	alreadyWarned[ message ] = true;
+	printWarning( message, args );
+}
+
+function warnIfDebug () {
+	if ( Ractive.DEBUG ) {
+		warn.apply( null, arguments );
+	}
+}
+
+function warnOnceIfDebug () {
+	if ( Ractive.DEBUG ) {
+		warnOnce.apply( null, arguments );
+	}
+}
+
+export { fatal, log, logIfDebug, warn, warnOnce, warnIfDebug, warnOnceIfDebug, welcome };</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

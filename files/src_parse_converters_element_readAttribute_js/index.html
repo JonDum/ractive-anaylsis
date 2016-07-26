@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/parse/converters/element/readAttribute.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/parse/converters/element/readAttribute.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">56.58</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">260</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">36.02</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">1.04</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { ATTRIBUTE, DECORATOR, BINDING_FLAG, TRANSITION, EVENT } from &#039;../../../config/types&#039;;
+import getLowestIndex from &#039;../utils/getLowestIndex&#039;;
+import readMustache from &#039;../readMustache&#039;;
+import { decodeCharacterReferences } from &#039;../../../utils/html&#039;;
+import processDirective from &#039;./processDirective&#039;;
+import { warnOnceIfDebug } from &#039;../../../utils/log&#039;;
+
+var attributeNamePattern = /^[^\s&quot;&#039;&gt;\/=]+/,
+	onPattern = /^on/,
+	proxyEventPattern = /^on-([a-zA-Z\\*\\.$_][a-zA-Z\\*\\.$_0-9\-]+)$/,
+	reservedEventNames = /^(?:change|reset|teardown|update|construct|config|init|render|unrender|detach|insert)$/,
+	decoratorPattern = /^as-([a-z-A-Z][-a-zA-Z_0-9]*)$/,
+	transitionPattern = /^([a-zA-Z](?:(?!-in-out)[-a-zA-Z_0-9])*)-(in|out|in-out)$/,
+	directives = {
+				   &#039;intro-outro&#039;: { t: TRANSITION, v: &#039;t0&#039; },
+				   intro: { t: TRANSITION, v: &#039;t1&#039; },
+				   outro: { t: TRANSITION, v: &#039;t2&#039; },
+				   lazy: { t: BINDING_FLAG, v: &#039;l&#039; },
+				   twoway: { t: BINDING_FLAG, v: &#039;t&#039; },
+				   decorator: { t: DECORATOR }
+				 },
+	unquotedAttributeValueTextPattern = /^[^\s&quot;&#039;=&lt;&gt;`]+/;
+
+export default function readAttribute ( parser ) {
+	var attr, name, value, i, nearest, idx;
+
+	parser.allowWhitespace();
+
+	name = parser.matchPattern( attributeNamePattern );
+	if ( !name ) {
+		return null;
+	}
+
+	// check for accidental delimiter consumption e.g. &lt;tag bool{{&gt;attrs}} /&gt;
+	nearest = name.length;
+	for ( i = 0; i &lt; parser.tags.length; i++ ) {
+		if ( ~( idx = name.indexOf( parser.tags[ i ].open ) ) ) {
+			if ( idx &lt; nearest ) nearest = idx;
+		}
+	}
+	if ( nearest &lt; name.length ) {
+		parser.pos -= name.length - nearest;
+		name = name.substr( 0, nearest );
+		return { n: name };
+	}
+
+	attr = { n: name };
+
+	value = readAttributeValue( parser );
+	if ( value != null ) { // not null/undefined
+		attr.f = value;
+	}
+
+	return attr;
+}
+
+function readAttributeValue ( parser ) {
+	var start, valueStart, startDepth, value;
+
+	start = parser.pos;
+
+	// next character must be `=`, `/`, `&gt;` or whitespace
+	if ( !/[=\/&gt;\s]/.test( parser.nextChar() ) ) {
+		parser.error( &#039;Expected `=`, `/`, `&gt;` or whitespace&#039; );
+	}
+
+	parser.allowWhitespace();
+
+	if ( !parser.matchString( &#039;=&#039; ) ) {
+		parser.pos = start;
+		return null;
+	}
+
+	parser.allowWhitespace();
+
+	valueStart = parser.pos;
+	startDepth = parser.sectionDepth;
+
+	value = readQuotedAttributeValue( parser, `&#039;` ) ||
+			readQuotedAttributeValue( parser, `&quot;` ) ||
+			readUnquotedAttributeValue( parser );
+
+	if ( value === null ) {
+		parser.error( &#039;Expected valid attribute value&#039; );
+	}
+
+	if ( parser.sectionDepth !== startDepth ) {
+		parser.pos = valueStart;
+		parser.error( &#039;An attribute value must contain as many opening section tags as closing section tags&#039; );
+	}
+
+	if ( !value.length ) {
+		return &#039;&#039;;
+	}
+
+	if ( value.length === 1 &amp;&amp; typeof value[0] === &#039;string&#039; ) {
+		return decodeCharacterReferences( value[0] );
+	}
+
+	return value;
+}
+
+function readUnquotedAttributeValueToken ( parser ) {
+	var start, text, haystack, needles, index;
+
+	start = parser.pos;
+
+	text = parser.matchPattern( unquotedAttributeValueTextPattern );
+
+	if ( !text ) {
+		return null;
+	}
+
+	haystack = text;
+	needles = parser.tags.map( t =&gt; t.open ); // TODO refactor... we do this in readText.js as well
+
+	if ( ( index = getLowestIndex( haystack, needles ) ) !== -1 ) {
+		text = text.substr( 0, index );
+		parser.pos = start + text.length;
+	}
+
+	return text;
+}
+
+function readUnquotedAttributeValue ( parser ) {
+	var tokens, token;
+
+	parser.inAttribute = true;
+
+	tokens = [];
+
+	token = readMustache( parser ) || readUnquotedAttributeValueToken( parser );
+	while ( token ) {
+		tokens.push( token );
+		token = readMustache( parser ) || readUnquotedAttributeValueToken( parser );
+	}
+
+	if ( !tokens.length ) {
+		return null;
+	}
+
+	parser.inAttribute = false;
+	return tokens;
+}
+
+function readQuotedAttributeValue ( parser, quoteMark ) {
+	var start, tokens, token;
+
+	start = parser.pos;
+
+	if ( !parser.matchString( quoteMark ) ) {
+		return null;
+	}
+
+	parser.inAttribute = quoteMark;
+
+	tokens = [];
+
+	token = readMustache( parser ) || readQuotedStringToken( parser, quoteMark );
+	while ( token !== null ) {
+		tokens.push( token );
+		token = readMustache( parser ) || readQuotedStringToken( parser, quoteMark );
+	}
+
+	if ( !parser.matchString( quoteMark ) ) {
+		parser.pos = start;
+		return null;
+	}
+
+	parser.inAttribute = false;
+
+	return tokens;
+}
+
+function readQuotedStringToken ( parser, quoteMark ) {
+	const haystack = parser.remaining();
+
+	let needles = parser.tags.map( t =&gt; t.open ); // TODO refactor... we do this in readText.js as well
+	needles.push( quoteMark );
+
+	const index = getLowestIndex( haystack, needles );
+
+	if ( index === -1 ) {
+		parser.error( &#039;Quoted attribute value must have a closing quote&#039; );
+	}
+
+	if ( !index ) {
+		return null;
+	}
+
+	parser.pos += index;
+	return haystack.substr( 0, index );
+}
+
+export function readAttributeOrDirective ( parser ) {
+		var match,
+			attribute,
+		    directive;
+
+		attribute = readAttribute( parser );
+
+		if ( !attribute ) return null;
+
+		// intro, outro, decorator
+		if ( directive = directives[ attribute.n ] ) {
+			attribute.t = directive.t;
+			if ( directive.v ) attribute.v = directive.v;
+			delete attribute.n; // no name necessary
+
+			if ( directive.t === TRANSITION || directive.t === DECORATOR ) attribute.f = processDirective( attribute.f, parser );
+
+			if ( directive.t === TRANSITION ) {
+				warnOnceIfDebug( `${ directive.v === &#039;t0&#039; ? &#039;intro-outro&#039; : directive.v === &#039;t1&#039; ? &#039;intro&#039; : &#039;outro&#039; } is deprecated. To specify tranisitions, use the transition name suffixed with &#039;-in&#039;, &#039;-out&#039;, or &#039;-in-out&#039; as an attribute. Arguments can be specified in the attribute value as a simple list of expressions without mustaches.` );
+			} else if ( directive.t === DECORATOR ) {
+				warnOnceIfDebug( `decorator is deprecated. To specify decorators, use the decorator name prefixed with &#039;as-&#039; as an attribute. Arguments can be specified in the attribute value as a simple list of expressions without mustaches.` );
+			}
+		}
+
+		// decorators
+		else if ( match = decoratorPattern.exec( attribute.n ) ) {
+			delete attribute.n;
+			attribute.t = DECORATOR;
+			attribute.f = processDirective( attribute.f, parser, DECORATOR );
+			if ( typeof attribute.f === &#039;object&#039; ) attribute.f.n = match[1];
+			else attribute.f = match[1];
+		}
+
+		// transitions
+		else if ( match = transitionPattern.exec( attribute.n ) ) {
+			delete attribute.n;
+			attribute.t = TRANSITION;
+			attribute.f = processDirective( attribute.f, parser, TRANSITION );
+			if ( typeof attribute.f === &#039;object&#039; ) attribute.f.n = match[1];
+			else attribute.f = match[1];
+			attribute.v = match[2] === &#039;in-out&#039; ? &#039;t0&#039; : match[2] === &#039;in&#039; ? &#039;t1&#039; : &#039;t2&#039;;
+		}
+
+		// on-click etc
+		else if ( match = proxyEventPattern.exec( attribute.n ) ) {
+			attribute.n = match[1];
+			attribute.t = EVENT;
+			attribute.f = processDirective( attribute.f, parser, EVENT );
+
+			if ( reservedEventNames.test( attribute.f.n || attribute.f ) ) {
+				parser.pos -= ( attribute.f.n || attribute.f ).length;
+				parser.error( &#039;Cannot use reserved event names (change, reset, teardown, update, construct, config, init, render, unrender, detach, insert)&#039; );
+			}
+		}
+
+		else {
+			if ( parser.sanitizeEventAttributes &amp;&amp; onPattern.test( attribute.n ) ) {
+				return { exclude: true };
+			} else {
+				attribute.f = attribute.f || ( attribute.f === &#039;&#039; ? &#039;&#039; : 0 );
+				attribute.t = ATTRIBUTE;
+			}
+		}
+
+		return attribute;
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

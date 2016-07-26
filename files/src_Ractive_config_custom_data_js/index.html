@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/Ractive/config/custom/data.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/Ractive/config/custom/data.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">67.43</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">131</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">25.76</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.30</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { fatal, warnIfDebug, warnOnceIfDebug } from &#039;../../../utils/log&#039;;
+import { isObject, isArray } from &#039;../../../utils/is&#039;;
+import bind from &#039;../../../utils/bind&#039;;
+
+function validate ( data ) {
+	// Warn if userOptions.data is a non-POJO
+	if ( data &amp;&amp; data.constructor !== Object ) {
+		if ( typeof data === &#039;function&#039; ) {
+			// TODO do we need to support this in the new Ractive() case?
+		} else if ( typeof data !== &#039;object&#039; ) {
+			fatal( `data option must be an object or a function, \`${data}\` is not valid` );
+		} else {
+			warnIfDebug( &#039;If supplied, options.data should be a plain JavaScript object - using a non-POJO as the root object may work, but is discouraged&#039; );
+		}
+	}
+}
+
+export default {
+	name: &#039;data&#039;,
+
+	extend: ( Parent, proto, options ) =&gt; {
+		let key;
+		let value;
+
+		// check for non-primitives, which could cause mutation-related bugs
+		if ( options.data &amp;&amp; isObject( options.data ) ) {
+			for ( key in options.data ) {
+				value = options.data[ key ];
+
+				if ( value &amp;&amp; typeof value === &#039;object&#039; ) {
+					if ( isObject( value ) || isArray( value ) ) {
+						warnIfDebug( `Passing a \`data\` option with object and array properties to Ractive.extend() is discouraged, as mutating them is likely to cause bugs. Consider using a data function instead:
+
+  // this...
+  data: function () {
+    return {
+      myObject: {}
+    };
+  })
+
+  // instead of this:
+  data: {
+    myObject: {}
+  }` );
+					}
+				}
+			}
+		}
+
+		proto.data = combine( proto.data, options.data );
+	},
+
+	init: ( Parent, ractive, options ) =&gt; {
+		let result = combine( Parent.prototype.data, options.data );
+
+		if ( typeof result === &#039;function&#039; ) result = result.call( ractive );
+
+		// bind functions to the ractive instance at the top level,
+		// unless it&#039;s a non-POJO (in which case alarm bells should ring)
+		if ( result &amp;&amp; result.constructor === Object ) {
+			for ( let prop in result ) {
+				if ( typeof result[ prop ] === &#039;function&#039; ) result[ prop ] = bind( result[ prop ], ractive );
+			}
+		}
+
+		return result || {};
+	},
+
+	reset ( ractive ) {
+		const result = this.init( ractive.constructor, ractive, ractive.viewmodel );
+		ractive.viewmodel.root.set( result );
+		return true;
+	}
+};
+
+function combine ( parentValue, childValue ) {
+	validate( childValue );
+
+	let parentIsFn = typeof parentValue === &#039;function&#039;;
+	let childIsFn = typeof childValue === &#039;function&#039;;
+
+	// Very important, otherwise child instance can become
+	// the default data object on Ractive or a component.
+	// then ractive.set() ends up setting on the prototype!
+	if ( !childValue &amp;&amp; !parentIsFn ) {
+		childValue = {};
+	}
+
+	// Fast path, where we just need to copy properties from
+	// parent to child
+	if ( !parentIsFn &amp;&amp; !childIsFn ) {
+		return fromProperties( childValue, parentValue );
+	}
+
+	return function () {
+		let child = childIsFn ? callDataFunction( childValue, this ) : childValue;
+		let parent = parentIsFn ? callDataFunction( parentValue, this ) : parentValue;
+
+		return fromProperties( child, parent );
+	};
+}
+
+function callDataFunction ( fn, context ) {
+	let data = fn.call( context );
+
+	if ( !data ) return;
+
+	if ( typeof data !== &#039;object&#039; ) {
+		fatal( &#039;Data function must return an object&#039; );
+	}
+
+	if ( data.constructor !== Object ) {
+		warnOnceIfDebug( &#039;Data function returned something other than a plain JavaScript object. This might work, but is strongly discouraged&#039; );
+	}
+
+	return data;
+}
+
+function fromProperties ( primary, secondary ) {
+	if ( primary &amp;&amp; secondary ) {
+		for ( let key in secondary ) {
+			if ( !( key in primary ) ) {
+				primary[ key ] = secondary[ key ];
+			}
+		}
+
+		return primary;
+	}
+
+	return primary || secondary;
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

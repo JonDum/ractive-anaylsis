@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/Section.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/Section.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">73.76</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">220</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">9.69</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.10</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import { createDocumentFragment } from &#039;../../utils/dom&#039;;
+import { SECTION_EACH, SECTION_IF, SECTION_IF_WITH, SECTION_UNLESS, SECTION_WITH } from &#039;../../config/types&#039;;
+import { isArray, isObject } from &#039;../../utils/is&#039;;
+import Fragment from &#039;../Fragment&#039;;
+import RepeatedFragment from &#039;../RepeatedFragment&#039;;
+import Mustache from &#039;./shared/Mustache&#039;;
+
+function isEmpty ( value ) {
+	return !value ||
+	       ( isArray( value ) &amp;&amp; value.length === 0 ) ||
+		   ( isObject( value ) &amp;&amp; Object.keys( value ).length === 0 );
+}
+
+function getType ( value, hasIndexRef ) {
+	if ( hasIndexRef || isArray( value ) ) return SECTION_EACH;
+	if ( isObject( value ) || typeof value === &#039;function&#039; ) return SECTION_IF_WITH;
+	if ( value === undefined ) return null;
+	return SECTION_IF;
+}
+
+export default class Section extends Mustache {
+	constructor ( options ) {
+		super( options );
+
+		this.sectionType = options.template.n || null;
+		this.templateSectionType = this.sectionType;
+		this.fragment = null;
+	}
+
+	bind () {
+		super.bind();
+
+		// if we managed to bind, we need to create children
+		if ( this.model ) {
+			this.dirty = true;
+			this.update();
+		} else if (this.sectionType &amp;&amp; this.sectionType === SECTION_UNLESS) {
+			this.fragment = new Fragment({
+				owner: this,
+				template: this.template.f
+			}).bind();
+		}
+	}
+
+	destroyed () {
+		if ( this.fragment ) this.fragment.destroyed();
+	}
+
+	detach () {
+		return this.fragment ? this.fragment.detach() : createDocumentFragment();
+	}
+
+	find ( selector ) {
+		if ( this.fragment ) {
+			return this.fragment.find( selector );
+		}
+	}
+
+	findAll ( selector, query ) {
+		if ( this.fragment ) {
+			this.fragment.findAll( selector, query );
+		}
+	}
+
+	findComponent ( name ) {
+		if ( this.fragment ) {
+			return this.fragment.findComponent( name );
+		}
+	}
+
+	findAllComponents ( name, query ) {
+		if ( this.fragment ) {
+			this.fragment.findAllComponents( name, query );
+		}
+	}
+
+	firstNode ( skipParent ) {
+		return this.fragment &amp;&amp; this.fragment.firstNode( skipParent );
+	}
+
+	rebind () {
+		super.rebind();
+
+		if ( this.fragment ) {
+			this.fragment.rebind( this.sectionType === SECTION_IF || this.sectionType === SECTION_UNLESS ? null : this.model );
+		}
+	}
+
+	render ( target, occupants ) {
+		this.rendered = true;
+		if ( this.fragment ) this.fragment.render( target, occupants );
+	}
+
+	shuffle ( newIndices ) {
+		if ( this.fragment &amp;&amp; this.sectionType === SECTION_EACH ) {
+			this.fragment.shuffle( newIndices );
+		}
+	}
+
+	toString ( escape ) {
+		return this.fragment ? this.fragment.toString( escape ) : &#039;&#039;;
+	}
+
+	unbind () {
+		super.unbind();
+		if ( this.fragment ) this.fragment.unbind();
+	}
+
+	unrender ( shouldDestroy ) {
+		if ( this.rendered &amp;&amp; this.fragment ) this.fragment.unrender( shouldDestroy );
+		this.rendered = false;
+	}
+
+	update () {
+		if ( !this.dirty ) return;
+		if ( !this.model &amp;&amp; this.sectionType !== SECTION_UNLESS ) return;
+
+		this.dirty = false;
+
+		const value = !this.model ? undefined : this.model.isRoot ? this.model.value : this.model.get();
+		const lastType = this.sectionType;
+
+		// watch for switching section types
+		if ( this.sectionType === null || this.templateSectionType === null ) this.sectionType = getType( value, this.template.i );
+		if ( lastType &amp;&amp; lastType !== this.sectionType &amp;&amp; this.fragment ) {
+			if ( this.rendered ) {
+				this.fragment.unbind().unrender( true );
+			}
+
+			this.fragment = null;
+		}
+
+		let newFragment;
+
+		if ( this.sectionType === SECTION_EACH ) {
+			if ( this.fragment ) {
+				this.fragment.update();
+			} else {
+				// TODO can this happen?
+				newFragment = new RepeatedFragment({
+					owner: this,
+					template: this.template.f,
+					indexRef: this.template.i
+				}).bind( this.model );
+			}
+		}
+
+		// WITH is now IF_WITH; WITH is only used for {{&gt;partial context}}
+		else if ( this.sectionType === SECTION_WITH ) {
+			if ( this.fragment ) {
+				this.fragment.update();
+			} else {
+				newFragment = new Fragment({
+					owner: this,
+					template: this.template.f
+				}).bind( this.model );
+			}
+		}
+
+		else if ( this.sectionType === SECTION_IF_WITH ) {
+			if ( this.fragment ) {
+				if ( isEmpty( value ) ) {
+					if ( this.rendered ) {
+						this.fragment.unbind().unrender( true );
+					}
+
+					this.fragment = null;
+				} else {
+					this.fragment.update();
+				}
+			} else if ( !isEmpty( value ) ) {
+				newFragment = new Fragment({
+					owner: this,
+					template: this.template.f
+				}).bind( this.model );
+			}
+		}
+
+		else {
+			const fragmentShouldExist = this.sectionType === SECTION_UNLESS ? isEmpty( value ) : !!value &amp;&amp; !isEmpty( value );
+
+			if ( this.fragment ) {
+				if ( fragmentShouldExist ) {
+					this.fragment.update();
+				} else {
+					if ( this.rendered ) {
+						this.fragment.unbind().unrender( true );
+					}
+
+					this.fragment = null;
+				}
+			} else if ( fragmentShouldExist ) {
+				newFragment = new Fragment({
+					owner: this,
+					template: this.template.f
+				}).bind( null );
+			}
+		}
+
+		if ( newFragment ) {
+			if ( this.rendered ) {
+				const parentNode = this.parentFragment.findParentNode();
+				const anchor = this.parentFragment.findNextNode( this );
+
+				if ( anchor ) {
+					const docFrag = createDocumentFragment();
+					newFragment.render( docFrag );
+
+					// we use anchor.parentNode, not parentNode, because the sibling
+					// may be temporarily detached as a result of a shuffle
+					anchor.parentNode.insertBefore( docFrag, anchor );
+				} else {
+					newFragment.render( parentNode );
+				}
+			}
+
+			this.fragment = newFragment;
+		}
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>

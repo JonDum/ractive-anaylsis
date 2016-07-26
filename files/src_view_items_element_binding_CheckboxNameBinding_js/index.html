@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Plato - src/view/items/element/binding/CheckboxNameBinding.js</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="">
+  <meta name="author" content="">
+
+  <!--[if lt IE 9]>
+  <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+  <![endif]-->
+
+  <link href="../../assets/css/vendor/morris.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/bootstrap.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/font-awesome.css" rel="stylesheet">
+  <link href="../../assets/css/vendor/codemirror.css" rel="stylesheet">
+  <link href="../../assets/css/plato.css" rel="stylesheet">
+  <link href="../../assets/css/plato-file.css" rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="navbar navbar-fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="http://github.com/es-analysis/plato">Plato on Github</a>
+    <ul class="nav navbar-nav">
+      <li>
+        <a href="../../index.html">Report Home</a>
+      </li>
+    </ul>
+  </div>
+</div>
+
+<div class="jumbotron">
+  <div class="container">
+    <h1>src/view/items/element/binding/CheckboxNameBinding.js</h1>
+  </div>
+</div>
+
+<div class="container aggregate-stats">
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Maintainability <a href="http://blogs.msdn.com/b/codeanalysis/archive/2007/11/20/maintainability-index-range-and-meaning.aspx"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="A value between 0 and 100 that represents the relative ease of maintaining the code. A high value means better maintainability." data-original-title="Maintainability Index"  data-container="body"></i></a></h2>
+      <p class="stat">74.92</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Lines of code <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h2>
+      <p class="stat">130</p>
+    </div>
+  </div>
+  <div class="row historical">
+    <div class="col-md-6">
+      <p id="chart_historical_maint" class="chart"></p>
+    </div>
+    <div class="col-md-6">
+      <p id="chart_historical_sloc" class="chart"></p>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h2 class="header">Difficulty  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="The difficulty measure is related to the difficulty of the program to write or understand." data-original-title="Difficulty" data-container="body"></i></a></h2>
+      <p class="stat">5.60</p>
+    </div>
+    <div class="col-md-6">
+      <h2 class="header">Estimated Errors  <a href="http://en.wikipedia.org/wiki/Halstead_complexity_measures"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Halstead's delivered bugs is an estimate for the number of errors in the implementation." data-original-title="Delivered Bugs" data-container="body"></i></a></h2>
+      <p class="stat">0.04</p>
+    </div>
+  </div>
+</div>
+
+<div class="container charts">
+  <div class="row">
+    <h2 class="header">Function weight</h2>
+  </div>
+  <div class="row">
+    <div class="col-md-6">
+      <h3 class="chart-header">By Complexity <a href="http://en.wikipedia.org/wiki/Cyclomatic_complexity"><i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="This metric counts the number of distinct paths through a block of code. Lower values are better." data-original-title="Cyclomatic Complexity" data-container="body"></i></a></h3>
+      <div id="fn-by-complexity" class="stat"></div>
+    </div>
+    <div class="col-md-6">
+      <h3 class="chart-header">By SLOC  <i class="icon icon-info-sign" rel="popover" data-placement="top" data-trigger="hover" data-content="Source Lines of Code / Logical Lines of Code" data-original-title="SLOC/LSLOC" data-container="body"></i></h3>
+      <div id="fn-by-sloc" class="stat"></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="row">
+    <textarea id="file-source" class="col-md-12">import Binding from &#039;./Binding&#039;;
+import { isArray } from &#039;../../../../utils/is&#039;;
+import { arrayContains, removeFromArray } from &#039;../../../../utils/array&#039;;
+import getBindingGroup from &#039;./getBindingGroup&#039;;
+import handleDomEvent from &#039;./handleDomEvent&#039;;
+
+const push = [].push;
+
+function getValue() {
+	const all = this.bindings.filter(b =&gt; b.node &amp;&amp; b.node.checked).map(b =&gt; b.element.getAttribute( &#039;value&#039; ));
+	let res = [];
+	all.forEach(v =&gt; { if ( !arrayContains( res, v ) ) res.push( v ); });
+	return res;
+}
+
+export default class CheckboxNameBinding extends Binding {
+	constructor ( element ) {
+		super( element, &#039;name&#039; );
+
+		this.checkboxName = true; // so that ractive.updateModel() knows what to do with this
+
+		// Each input has a reference to an array containing it and its
+		// group, as two-way binding depends on being able to ascertain
+		// the status of all inputs within the group
+		this.group = getBindingGroup( &#039;checkboxes&#039;, this.model, getValue );
+		this.group.add( this );
+
+		if ( this.noInitialValue ) {
+			this.group.noInitialValue = true;
+		}
+
+		// If no initial value was set, and this input is checked, we
+		// update the model
+		if ( this.group.noInitialValue &amp;&amp; this.element.getAttribute( &#039;checked&#039; ) ) {
+			const existingValue = this.model.get();
+			const bindingValue = this.element.getAttribute( &#039;value&#039; );
+
+			if ( !arrayContains( existingValue, bindingValue ) ) {
+				push.call( existingValue, bindingValue ); // to avoid triggering runloop with array adaptor
+			}
+		}
+	}
+
+	bind () {
+		if ( !this.group.bound ) {
+			this.group.bind();
+		}
+	}
+
+	changed () {
+		const wasChecked = !!this.isChecked;
+		this.isChecked = this.node.checked;
+		return this.isChecked === wasChecked;
+	}
+
+	getInitialValue () {
+		// This only gets called once per group (of inputs that
+		// share a name), because it only gets called if there
+		// isn&#039;t an initial value. By the same token, we can make
+		// a note of that fact that there was no initial value,
+		// and populate it using any `checked` attributes that
+		// exist (which users should avoid, but which we should
+		// support anyway to avoid breaking expectations)
+		this.noInitialValue = true; // TODO are noInitialValue and wasUndefined the same thing?
+		return [];
+	}
+
+	getValue () {
+		return this.group.value;
+	}
+
+	handleChange () {
+		this.isChecked = this.element.node.checked;
+		this.group.value = this.model.get();
+		const value = this.element.getAttribute( &#039;value&#039; );
+		if ( this.isChecked &amp;&amp; !arrayContains( this.group.value, value ) ) {
+			this.group.value.push( value );
+		} else if ( !this.isChecked &amp;&amp; arrayContains( this.group.value, value ) ) {
+			removeFromArray( this.group.value, value );
+		}
+		super.handleChange();
+	}
+
+	render () {
+		super.render();
+
+		const node = this.node;
+
+		const existingValue = this.model.get();
+		const bindingValue = this.element.getAttribute( &#039;value&#039; );
+
+		if ( isArray( existingValue ) ) {
+			this.isChecked = arrayContains( existingValue, bindingValue );
+		} else {
+			this.isChecked = existingValue == bindingValue;
+		}
+
+		node.name = &#039;{{&#039; + this.model.getKeypath() + &#039;}}&#039;;
+		node.checked = this.isChecked;
+
+		node.addEventListener( &#039;change&#039;, handleDomEvent, false );
+
+		// in case of IE emergency, bind to click event as well
+		if ( node.attachEvent ) {
+			node.addEventListener( &#039;click&#039;, handleDomEvent, false );
+		}
+	}
+
+	setFromNode ( node ) {
+		this.group.bindings.forEach( binding =&gt; binding.wasUndefined = true );
+
+		if ( node.checked ) {
+			const valueSoFar = this.group.getValue();
+			valueSoFar.push( this.element.getAttribute( &#039;value&#039; ) );
+
+			this.group.model.set( valueSoFar );
+		}
+	}
+
+	unbind () {
+		this.group.remove( this );
+	}
+
+	unrender () {
+		const node = this.element.node;
+
+		node.removeEventListener( &#039;change&#039;, handleDomEvent, false );
+		node.removeEventListener( &#039;click&#039;, handleDomEvent, false );
+	}
+}</textarea>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>.</p>
+  </div>
+</footer>
+
+<script type="text/html" id="complexity-popover-template">
+  <div class="complexity-notice">
+    Complexity : {{ complexity.cyclomatic }} <br>
+    Length : {{ complexity.halstead.length }} <br>
+    Difficulty : {{ complexity.halstead.difficulty.toFixed(2) }} <br>
+    Est # bugs : {{ complexity.halstead.bugs.toFixed(2) }}<br>
+  </div>
+</script>
+
+<script type="text/javascript" src="../../assets/scripts/bundles/core-bundle.js"></script>
+<script type="text/javascript" src="../../assets/scripts/bundles/codemirror.js"></script>
+<script type="text/javascript" src="../../assets/scripts/codemirror.markpopovertext.js"></script>
+<script type="text/javascript" src="report.js"></script>
+<script type="text/javascript" src="report.history.js"></script>
+<script type="text/javascript" src="../../assets/scripts/plato-file.js"></script>
+</body>
+</html>
